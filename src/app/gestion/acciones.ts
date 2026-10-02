@@ -190,3 +190,35 @@ export async function cambiarCuenta(form: FormData) {
   if (c) await registrar(g.usuario, activo ? "Cuenta reactivada" : "Cuenta dada de baja", c.usuario);
   revalidatePath("/gestion/sistema");
 }
+
+// ----- Observaciones de la comisión sobre las encuestas -----
+
+export async function agregarObservacion(form: FormData) {
+  const g = await exigirGestor();
+  const estamento = String(form.get("estamento"));
+  const pregunta = String(form.get("pregunta"));
+  const texto = String(form.get("texto") ?? "").trim().slice(0, 2000);
+  if (!["A", "E", "F"].includes(estamento) || !/^(intro|[AEF]\d{1,2})$/.test(pregunta) || !texto) return;
+  await db.insert(schema.observaciones).values({ estamento, pregunta, autorId: g.id, texto });
+  revalidatePath("/gestion/encuestas", "layout");
+}
+
+export async function cambiarObservacion(form: FormData) {
+  const g = await exigirGestor();
+  const id = Number(form.get("id"));
+  const accion = String(form.get("accion"));
+  const [obs] = await db.select().from(schema.observaciones).where(eq(schema.observaciones.id, id));
+  if (!obs) return;
+  if (accion === "eliminar") {
+    // Solo quien la escribió o administración.
+    if (obs.autorId !== g.id && g.rol !== "admin") return;
+    await db.delete(schema.observaciones).where(eq(schema.observaciones.id, id));
+  } else if (g.rol === "admin") {
+    const resuelta = accion === "resolver";
+    await db
+      .update(schema.observaciones)
+      .set({ resuelta, resueltaPor: resuelta ? g.nombre : null })
+      .where(eq(schema.observaciones.id, id));
+  }
+  revalidatePath("/gestion/encuestas", "layout");
+}

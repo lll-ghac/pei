@@ -94,3 +94,18 @@ export const bitacora = pgTable("bitacora", {
   accion: text("accion").notNull(),
   detalle: text("detalle"),
 });
+
+/** Observaciones de la comisión sobre la redacción de las encuestas (revisión previa). */
+export const observaciones = pgTable("observaciones", {
+  id: serial("id").primaryKey(),
+  estamento: text("estamento").notNull(), // A | E | F
+  /** Código de la pregunta (A5, E7…) o "intro" para la introducción. */
+  pregunta: text("pregunta").notNull(),
+  autorId: integer("autor_id")
+    .notNull()
+    .references(() => gestores.id),
+  texto: text("texto").notNull(),
+  creado: timestamp("creado", { withTimezone: true }).notNull().defaultNow(),
+  resuelta: boolean("resuelta").notNull().default(false),
+  resueltaPor: text("resuelta_por"),
+});
