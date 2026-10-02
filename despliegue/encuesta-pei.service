@@ -1,0 +1,39 @@
+# /etc/systemd/system/encuesta-pei.service
+# App Next.js de la Encuesta PEI 2027 en el CT 211. Escucha solo en 127.0.0.1:8080
+# (el túnel de Cloudflare llega a ese puerto). Sin registro de peticiones ni de IPs.
+[Unit]
+Description=Encuesta PEI 2027 (Next.js)
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=app
+Group=app
+WorkingDirectory=/home/app/PEI-encuesta/app
+EnvironmentFile=/home/app/PEI-encuesta/.env
+Environment=NODE_ENV=production
+Environment=PORT=8080
+Environment=HOSTNAME=127.0.0.1
+Environment=NEXT_TELEMETRY_DISABLED=1
+Environment=RESPALDOS_DIR=/home/app/PEI-encuesta/respaldos
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+UMask=0077
+
+# Endurecimiento: la app solo puede escribir en su carpeta de respaldos.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/app/PEI-encuesta/respaldos
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

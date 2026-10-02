@@ -1,14 +1,21 @@
 "use client";
 
 import { ArrowRight, LockKey } from "@phosphor-icons/react";
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import { ingresar, type EstadoIngreso } from "./acciones";
 
 export function FormularioIngreso() {
   const [estado, accion, enviando] = useActionState<EstadoIngreso, FormData>(ingresar, {});
 
   return (
-    <form action={accion} className="space-y-4" noValidate>
+    <form
+      // Envío manual: React 19 vacía el formulario tras una acción y se perdería lo escrito.
+      onSubmit={(e) => {
+        e.preventDefault();
+        const datos = new FormData(e.currentTarget);
+        startTransition(() => accion(datos));
+      }}
+      className="space-y-4" noValidate>
       <div>
         <label htmlFor="usuario" className="block font-bold mb-1">
           Usuario

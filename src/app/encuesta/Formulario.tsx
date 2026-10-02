@@ -217,9 +217,9 @@ export function Formulario({ estamento, curso }: Props) {
 
         {paso.tipo === "confirmar" && (
           <div>
-            <h2 ref={titulo} tabIndex={-1} className="titulo-encuesta text-2xl sm:text-3xl font-extrabold text-azul outline-none">
+            <h1 ref={titulo} tabIndex={-1} className="titulo-encuesta text-2xl sm:text-3xl font-extrabold text-azul outline-none">
               {esEstudiante ? "¡Ya casi terminas!" : "Ya casi termina"}
-            </h2>
+            </h1>
             <p className="mt-3 text-lg">
               {esEstudiante
                 ? "Cuando envíes, ya no podrás cambiar tus respuestas."

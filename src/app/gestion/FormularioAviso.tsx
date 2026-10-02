@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import type { Aviso } from "./acciones";
 
 type Props = {
@@ -15,7 +15,14 @@ type Props = {
 export function FormularioAviso({ accion, boton, peligro, children, className }: Props) {
   const [aviso, enviar, pendiente] = useActionState<Aviso, FormData>(accion, {});
   return (
-    <form action={enviar} className={className ?? "space-y-3"}>
+    <form
+      // Envío manual: React 19 vacía el formulario tras una acción y se perdería lo escrito.
+      onSubmit={(e) => {
+        e.preventDefault();
+        const datos = new FormData(e.currentTarget);
+        startTransition(() => enviar(datos));
+      }}
+      className={className ?? "space-y-3"}>
       {children}
       <button
         type="submit"
