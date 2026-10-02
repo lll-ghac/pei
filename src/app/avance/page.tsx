@@ -12,9 +12,9 @@ export default async function Avance() {
   return (
     <div className="flex-1 flex flex-col">
       <FranjaPrueba visible={estado.modo === "prueba"} />
-      <Cabecera />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
-        <h1 className="text-3xl font-extrabold text-azul">¿Cuántos hemos respondido?</h1>
+      <Cabecera ancho="ancho" detalle="Avance de la encuesta" />
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-7">
+        <h1 className="titulo text-[30px]">¿Cuántos hemos respondido?</h1>
         <p className="mt-1 mb-5 text-gris-texto">
           Se actualiza sola cada 30 segundos. Aquí no se muestra ninguna respuesta.
         </p>

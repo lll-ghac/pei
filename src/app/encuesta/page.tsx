@@ -32,19 +32,18 @@ export default async function PaginaEncuesta() {
     <div className="flex-1 flex flex-col">
       <FranjaPrueba visible={estado.modo === "prueba"} />
       <Cabecera
-        logo="escudo"
         derecha={
           <>
             <Ayuda />
             <form action={salir}>
-              <button type="submit" className="rounded-full px-3 py-1.5 min-h-11 font-bold text-gris-texto">
+              <button type="submit" className="rounded-[2px] px-3 min-h-12 font-bold text-white/85 hover:bg-white/10">
                 Salir
               </button>
             </form>
           </>
         }
       />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
+      <main className="mx-auto w-full max-w-2xl flex-1 sm:px-4 py-5 sm:py-8">
         <Formulario estamento={cred.estamento as Estamento} curso={cred.estamento === "F" ? null : cred.curso} />
       </main>
     </div>

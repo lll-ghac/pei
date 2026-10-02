@@ -12,8 +12,8 @@ import {
 } from "../../acciones";
 import { FormularioAviso } from "../../FormularioAviso";
 
-const campo = "w-full min-w-0 rounded-xl border-2 border-borde bg-tarjeta px-3 py-2 text-base";
-const tarjeta = "rounded-[24px] bg-tarjeta border border-borde p-5 space-y-3";
+const campo = "w-full min-w-0 rounded-[2px] border border-grafito bg-tarjeta px-3 py-2 text-base";
+const tarjeta = "rounded-[3px] bg-tarjeta border border-borde p-5 space-y-3";
 
 export default async function Sistema() {
   const g = await exigirGestor("admin");
@@ -24,10 +24,10 @@ export default async function Sistema() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-extrabold text-azul">Sistema</h1>
+      <h1 className="titulo text-[30px]">Sistema</h1>
 
       <section className={tarjeta}>
-        <h2 className="text-xl font-extrabold">Modo de la plataforma</h2>
+        <h2 className="rotulo text-[17px]">Modo de la plataforma</h2>
         <p>
           Modo actual: <strong>{estado.modo === "prueba" ? "Prueba" : "Oficial"}</strong>
           {estado.modo === "oficial" && (
@@ -40,8 +40,8 @@ export default async function Sistema() {
 
         {estado.modo === "prueba" ? (
           <div className="grid gap-5 md:grid-cols-2">
-            <div className="rounded-2xl border-2 border-error/40 p-4 space-y-2">
-              <h3 className="font-extrabold">Reinicio a cero</h3>
+            <div className="rounded-[2px] border border-lacre/50 p-4 space-y-2">
+              <h3 className="font-bold">Reinicio a cero</h3>
               <p className="text-base">
                 Borra todas las respuestas y el conteo de avance, elimina las credenciales de prueba y deja las
                 oficiales sin usar. Conserva cursos, matrícula, cuentas y ajustes. Antes de borrar se guarda un
@@ -54,8 +54,8 @@ export default async function Sistema() {
                 </label>
               </FormularioAviso>
             </div>
-            <div className="rounded-2xl border-2 border-azul/40 p-4 space-y-2">
-              <h3 className="font-extrabold">Pasar a modo Oficial</h3>
+            <div className="rounded-[2px] border border-timbre/40 p-4 space-y-2">
+              <h3 className="font-bold">Pasar a modo Oficial</h3>
               <p className="text-base">
                 Requiere haber hecho el reinicio a cero. Desde ese momento el reinicio queda bloqueado para que
                 nadie borre respuestas reales por error. Después se abre el periodo oficial.
@@ -73,7 +73,7 @@ export default async function Sistema() {
             <input type="hidden" name="accion" value={estado.abierta ? "cerrar" : "abrir"} />
             <button
               type="submit"
-              className={`rounded-full px-5 py-2.5 font-bold text-white ${estado.abierta ? "bg-error" : "bg-verde-profundo"}`}
+              className={`boton ${estado.abierta ? "boton-peligro" : "boton-primario"}`}
             >
               {estado.abierta ? "Cerrar el periodo oficial" : "Abrir el periodo oficial"}
             </button>
@@ -82,7 +82,7 @@ export default async function Sistema() {
       </section>
 
       <section className={tarjeta}>
-        <h2 className="text-xl font-extrabold">Cuentas de gestión</h2>
+        <h2 className="rotulo text-[17px]">Cuentas de gestión</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-base">
             <thead>
@@ -117,7 +117,7 @@ export default async function Sistema() {
             </tbody>
           </table>
         </div>
-        <h3 className="font-extrabold pt-2">Crear cuenta</h3>
+        <h3 className="font-bold pt-2">Crear cuenta</h3>
         <FormularioAviso accion={crearCuenta} boton="Crear cuenta" className="grid gap-3 sm:grid-cols-4 items-end">
           <label className="grid gap-1 min-w-0 text-base font-bold">
             Usuario
@@ -138,7 +138,7 @@ export default async function Sistema() {
       </section>
 
       <section className={tarjeta}>
-        <h2 className="text-xl font-extrabold">Mi contraseña</h2>
+        <h2 className="rotulo text-[17px]">Mi contraseña</h2>
         <FormularioAviso accion={cambiarClavePropia} boton="Cambiar contraseña" className="grid gap-3 sm:grid-cols-3 items-end">
           <label className="grid gap-1 min-w-0 text-base font-bold">
             Actual

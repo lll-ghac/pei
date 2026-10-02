@@ -1,63 +1,230 @@
 @import "tailwindcss";
 
-/* Paleta del MVP (identidad de escuelaecuador.cl). Solo tema claro, a propósito. */
+/*
+ * Mundo «Cédula y urna» (ver DESIGN.md y .impeccable/surfaces).
+ * Papel de cédula, tinta negra, azul de timbre, raya de grafito.
+ * El verde de la escuela queda reservado a lo que se puede tocar o ya se eligió.
+ * Tema claro a propósito: se responde de día, en celular, o en el laboratorio.
+ */
 @theme inline {
-  --color-verde: #92b01a; /* fondos de marca y seleccionado, solo con texto oscuro */
-  --color-verde-oscuro: #1f2a05; /* texto sobre verde-escuela */
-  --color-verde-profundo: #4f6210; /* botones con texto blanco */
-  --color-azul: #1c39bb; /* encabezados, barra de progreso */
-  --color-amarillo: #fdbe05; /* acentos y celebración */
-  --color-grafito: #393d42; /* texto principal */
-  --color-gris-texto: #6b6b6e; /* texto secundario */
-  --color-fondo: #f7f7f7;
-  --color-tarjeta: #ffffff;
-  --color-borde: #d9dccf;
-  --color-error: #b3261e;
+  --color-papel: #ffffff; /* la hoja */
+  --color-fondo: #eceeea; /* mesa gris papel, frío */
+  --color-tinta: #16181a; /* texto principal */
+  --color-grafito: #3d4145; /* raya de lápiz y texto secundario fuerte */
+  --color-gris-texto: #5c6166; /* texto secundario (≥ 4.5:1 sobre papel y fondo) */
+  --color-filete: #c9ccc6; /* filetes de 1 px */
+  --color-timbre: #22357f; /* banda, sellos, enlaces informativos */
+  --color-timbre-claro: #e6e9f4;
+  --color-verde: #92b01a; /* verde escuela: tocable o elegido */
+  --color-verde-oscuro: #1f2a05; /* texto sobre verde escuela */
+  --color-verde-tinta: #4a5c0c; /* verde para texto/enlaces sobre papel */
+  --color-verde-claro: #eef4d6; /* fila elegida */
+  --color-lacre: #a3271f; /* sello de error u observado */
+  --color-lacre-claro: #f7e4e2;
+  --color-ocre-claro: #f4e7c2; /* pendiente / prueba */
 
-  --font-sans: var(--font-montserrat), "Segoe UI", Arial, sans-serif;
-  --font-estudiante: var(--font-lilita), var(--font-montserrat), sans-serif;
+  /* Nombres anteriores, para las pantallas del panel */
+  --color-azul: var(--color-timbre);
+  --color-amarillo: var(--color-ocre-claro);
+  --color-tarjeta: var(--color-papel);
+  --color-borde: var(--color-filete);
+  --color-error: var(--color-lacre);
+  --color-verde-profundo: var(--color-verde-tinta);
 
-  --radius-tarjeta: 24px;
+  --font-sans: var(--font-atkinson), "Segoe UI", Arial, sans-serif;
+  --font-rotulo: var(--font-archivo), "Arial Narrow", Arial, sans-serif;
+  --font-credencial: var(--font-courier), "Courier New", monospace;
+
+  --ease-salida: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-movimiento: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 html {
   color-scheme: light;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background: var(--color-fondo);
-  color: var(--color-grafito);
+  color: var(--color-tinta);
   font-family: var(--font-sans);
-  font-weight: 500;
-  font-size: 18px; /* mínimo del MVP */
+  font-size: 19px;
   line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  caret-color: var(--color-timbre);
 }
 
-/* Foco visible para navegar con teclado. */
+::selection {
+  background: var(--color-verde);
+  color: var(--color-verde-oscuro);
+}
+
+a {
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+
 :focus-visible {
-  outline: 3px solid var(--color-azul);
+  outline: 3px solid var(--color-timbre);
   outline-offset: 2px;
 }
-
-/* Formas curvas de fondo (identidad, sin degradados). */
-.fondo-formas {
-  background-color: var(--color-fondo);
-  background-image:
-    radial-gradient(circle at 105% -5%, color-mix(in srgb, var(--color-verde) 28%, transparent) 0 22rem, transparent 22rem),
-    radial-gradient(circle at -10% 105%, color-mix(in srgb, var(--color-amarillo) 22%, transparent) 0 16rem, transparent 16rem);
-  background-attachment: fixed;
+/* Los títulos reciben foco por programa al cambiar de pantalla (lectores de pantalla): sin anillo. */
+[tabindex="-1"]:focus,
+[tabindex="-1"]:focus-visible {
+  outline: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
-    animation: none !important;
+* {
+  scrollbar-color: var(--color-filete) transparent;
+  scrollbar-width: thin;
+}
+
+/* Rótulos impresos de la cédula: Archivo angosta, mayúsculas. */
+.rotulo {
+  font-family: var(--font-rotulo);
+  font-stretch: 75%;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+}
+
+.titulo {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  line-height: 1.22;
+  text-wrap: balance;
+}
+
+/* Línea de corte perforada bajo la banda de timbre. */
+.perforado {
+  height: 10px;
+  background-image: radial-gradient(circle at 5px 5px, var(--color-fondo) 2.4px, transparent 2.6px);
+  background-size: 14px 10px;
+  background-color: var(--color-papel);
+}
+
+/* Sello rectangular con borde doble (VOTO SECRETO, PRUEBA, OBSERVADO). */
+.sello {
+  font-family: var(--font-rotulo);
+  font-stretch: 75%;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: inline-block;
+  border: 1.5px solid currentColor;
+  outline: 1px solid currentColor;
+  outline-offset: 2px;
+  padding: 0.1em 0.5em;
+  line-height: 1.3;
+}
+
+/* Botones: bloque casi recto, compresión leve al presionar. */
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.25rem;
+  padding: 0.75rem 1.4rem;
+  border-radius: 3px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  transition:
+    transform 140ms var(--ease-salida),
+    background-color 140ms ease;
+}
+.boton:active {
+  transform: scale(0.97);
+}
+.boton:disabled {
+  opacity: 0.55;
+  transform: none;
+}
+.boton-primario {
+  background: var(--color-verde);
+  color: var(--color-verde-oscuro);
+  box-shadow: inset 0 -2px 0 rgb(31 42 5 / 0.25);
+}
+.boton-secundario {
+  background: var(--color-papel);
+  color: var(--color-tinta);
+  border: 1px solid var(--color-grafito);
+}
+.boton-peligro {
+  background: var(--color-lacre);
+  color: #fff;
+}
+@media (hover: hover) and (pointer: fine) {
+  .boton-primario:hover {
+    background: #86a316;
+  }
+  .boton-secundario:hover {
+    background: var(--color-fondo);
   }
 }
 
-/* Encuesta de estudiantes: títulos en Lilita One (rasgo propio, MVP). */
-.estudiante .titulo-encuesta {
-  font-family: var(--font-lilita), var(--font-montserrat), sans-serif;
-  font-weight: 400;
-  letter-spacing: 0.01em;
+.campo {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--color-grafito);
+  border-radius: 2px;
+  background: var(--color-papel);
+  padding: 0.7rem 0.85rem;
+  font-size: 1.05rem;
+}
+.campo:focus {
+  outline: 3px solid var(--color-timbre);
+  outline-offset: 0;
+}
+
+/* Raya de lápiz: se dibuja al marcar (gesto propio del mundo). */
+.raya {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: dibujar-raya 190ms var(--ease-salida) forwards;
+}
+@keyframes dibujar-raya {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Al enviar: la papeleta se dobla y baja a la urna. */
+.papeleta-doblandose {
+  transform-origin: 50% 0%;
+  animation: doblar 420ms var(--ease-movimiento) forwards;
+}
+@keyframes doblar {
+  0% {
+    transform: perspective(900px) rotateX(0deg) translateY(0);
+    opacity: 1;
+  }
+  55% {
+    transform: perspective(900px) rotateX(62deg) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: perspective(900px) rotateX(78deg) translateY(55%) scale(0.9);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .raya {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .papeleta-doblandose {
+    animation: desvanecer 200ms ease forwards;
+  }
+  .boton:active {
+    transform: none;
+  }
+}
+@keyframes desvanecer {
+  to {
+    opacity: 0;
+  }
 }

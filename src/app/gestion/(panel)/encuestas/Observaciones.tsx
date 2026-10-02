@@ -32,7 +32,7 @@ export function Observaciones({
 }) {
   const pendientes = lista.filter((o) => !o.resuelta).length;
   return (
-    <div className="mt-3 rounded-2xl bg-fondo border border-borde">
+    <div className="mt-3 rounded-[2px] bg-fondo border border-borde">
       {lista.length > 0 && (
         <ul className="divide-y divide-borde">
           {lista.map((o) => (
@@ -71,7 +71,7 @@ export function Observaciones({
           <ChatCircleText size={20} weight="bold" aria-hidden />
           Agregar observación
           {pendientes > 0 && (
-            <span className="ml-1 rounded-full bg-amarillo px-2 text-sm text-grafito">{pendientes} pendiente{pendientes > 1 ? "s" : ""}</span>
+            <span className="ml-1 sello text-lacre text-[12px]">{pendientes} pendiente{pendientes > 1 ? "s" : ""}</span>
           )}
         </summary>
         <form action={agregarObservacion} className="mt-2 mb-2 space-y-2">
@@ -84,9 +84,9 @@ export function Observaciones({
             rows={3}
             placeholder="Ej.: «sellos» puede no entenderse; sugiero «lo que nos distingue». O: falta la opción…"
             aria-label={`Observación sobre ${pregunta}`}
-            className="w-full rounded-xl border-2 border-borde bg-tarjeta px-3 py-2 text-base"
+            className="w-full rounded-[2px] border border-grafito bg-tarjeta px-3 py-2 text-base"
           />
-          <button type="submit" className="rounded-full bg-verde-profundo text-white px-4 py-2 font-bold">
+          <button type="submit" className="boton boton-primario">
             Guardar observación
           </button>
         </form>

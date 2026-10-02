@@ -1,3 +1,4 @@
+import { ArrowLeft } from "@phosphor-icons/react/ssr";
 import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -26,7 +27,7 @@ function Opciones({ p }: { p: Pregunta }) {
         </p>
         {p.grupos.map((g, i) => (
           <div key={i}>
-            {g.titulo && <p className="font-bold text-verde-profundo">{g.titulo}</p>}
+            {g.titulo && <p className="rotulo text-[15px] text-grafito">{g.titulo}</p>}
             <ol className="list-none space-y-0.5">
               {g.items.map((it) => (
                 <li key={it.codigo} className="flex gap-2">
@@ -86,14 +87,14 @@ export default async function TodasLasPreguntas(props: PageProps<"/gestion/encue
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <Link href="/gestion/encuestas" className="text-azul underline font-bold">
-          ← Encuestas
+        <Link href="/gestion/encuestas" className="inline-flex items-center gap-1.5 text-timbre underline font-bold">
+          <ArrowLeft size={18} weight="bold" aria-hidden /> Encuestas
         </Link>
-        <Link href={`/gestion/vista-previa/${estamento}`} className="ml-auto rounded-full bg-verde-profundo text-white px-4 py-2 font-bold">
+        <Link href={`/gestion/vista-previa/${estamento}`} className="ml-auto boton boton-primario no-underline">
           Recorrer como participante
         </Link>
       </div>
-      <div className="rounded-[24px] bg-azul/8 border border-azul/30 p-4 text-base space-y-1">
+      <div className="rounded-[3px] bg-timbre-claro border border-azul/30 p-4 text-base space-y-1">
         <p>
           <strong>Revisión de la comisión.</strong> Bajo cada pregunta puede dejar una observación: redacción
           confusa, una opción que falta, un error. Todas las cuentas del panel ven las observaciones; la
@@ -118,12 +119,10 @@ export default async function TodasLasPreguntas(props: PageProps<"/gestion/encue
           )}
         </p>
       </div>
-      <article className="rounded-[24px] bg-tarjeta border border-borde p-5 sm:p-8 space-y-5">
+      <article className="rounded-[3px] bg-tarjeta border border-borde p-5 sm:p-8 space-y-5">
         <header>
-          <p className="text-sm font-bold uppercase tracking-wide text-verde-profundo">
-            Instrumento {VERSION_INSTRUMENTO}
-          </p>
-          <h1 className="text-3xl font-extrabold text-azul">{enc.titulo}</h1>
+          <h1 className="titulo text-[30px]">{enc.titulo}</h1>
+          <p className="mt-1 text-[16px] text-gris-texto">Instrumento {VERSION_INSTRUMENTO}</p>
           {enc.introduccion.map((t) => (
             <p key={t} className="mt-2">
               {t}
@@ -135,7 +134,7 @@ export default async function TodasLasPreguntas(props: PageProps<"/gestion/encue
         </header>
         {enc.secciones.map((s) => (
           <section key={s.titulo} className="space-y-4">
-            <h2 className="text-xl font-extrabold border-b-2 border-verde pb-1">{s.titulo}</h2>
+            <h2 className="rotulo text-[17px] border-b-2 border-tinta pb-1">{s.titulo}</h2>
             {s.preguntas.map((p) => (
               <div key={p.codigo} id={p.codigo} className="break-inside-avoid scroll-mt-4">
                 {p.cita && (

@@ -18,9 +18,9 @@ export async function ingresar(_previo: EstadoIngreso, form: FormData): Promise<
   const usuario = normalizarCredencial(String(form.get("usuario") ?? ""));
   const clave = normalizarCredencial(String(form.get("clave") ?? ""));
 
-  if (!usuario || !clave) return { error: "Escribe tu usuario y tu contraseña.", usuario };
+  if (!usuario || !clave) return { error: "Escriba su usuario y su contraseña.", usuario };
   if (!permitir(await ipCliente())) {
-    return { error: "Hay demasiados intentos desde esta conexión. Espera un minuto.", usuario };
+    return { error: "Hay demasiados intentos desde esta conexión. Espere un minuto.", usuario };
   }
 
   const [cred] = await db
@@ -30,10 +30,10 @@ export async function ingresar(_previo: EstadoIngreso, form: FormData): Promise<
 
   if (!cred) {
     contarFallido();
-    return { error: "No encontramos ese usuario. Revisa que esté bien escrito.", usuario };
+    return { error: "No encontramos ese usuario. Revise que esté bien escrito.", usuario };
   }
   if (cred.bloqueadaHasta && cred.bloqueadaHasta > new Date()) {
-    return { error: `Hubo muchos intentos. Espera ${BLOQUEO_MIN} minutos y vuelve a intentar.`, usuario };
+    return { error: `Hubo muchos intentos. Espere ${BLOQUEO_MIN} minutos y vuelva a intentar.`, usuario };
   }
   if (!compararSeguro(clave, cred.clave)) {
     contarFallido();
@@ -46,12 +46,12 @@ export async function ingresar(_previo: EstadoIngreso, form: FormData): Promise<
           : { intentosFallidos: n },
       )
       .where(eq(schema.credenciales.id, cred.id));
-    return { error: "La contraseña no coincide. Revisa que esté bien escrita.", usuario };
+    return { error: "La contraseña no coincide. Revise que esté bien escrita.", usuario };
   }
   if (cred.estado === "usada") return { error: "Esta credencial ya fue usada.", usuario };
   if (cred.estado === "desactivada") {
     return {
-      error: "Esta credencial no está activa. Pide una papeleta de reserva al profesor jefe o a la comisión.",
+      error: "Esta papeleta no está activa. Pida una de reserva al profesor jefe o a la comisión.",
       usuario,
     };
   }
@@ -59,9 +59,9 @@ export async function ingresar(_previo: EstadoIngreso, form: FormData): Promise<
   const estado = await leerEstado();
   if (!puedeResponder(estado, cred.prueba)) {
     if (estado.modo === "prueba") {
-      return { error: "La encuesta aún no comienza. Guarda tu papeleta para cuando se abra.", usuario };
+      return { error: "La encuesta aún no comienza. Guarde su papeleta para cuando se abra.", usuario };
     }
-    if (cred.prueba) return { error: "Esta credencial era de prueba y ya no sirve.", usuario };
+    if (cred.prueba) return { error: "Esta papeleta era de prueba y ya no sirve.", usuario };
     return { error: "La encuesta no está abierta en este momento.", usuario };
   }
 
@@ -83,7 +83,7 @@ export type ResultadoEnvio = { ok: true } | { ok: false; error: string };
  */
 export async function enviarEncuesta(respuestas: unknown): Promise<ResultadoEnvio> {
   const id = await leerParticipante();
-  if (!id) return { ok: false, error: "Tu sesión terminó. Vuelve a ingresar con tu credencial." };
+  if (!id) return { ok: false, error: "La sesión terminó. Vuelva a ingresar con su papeleta." };
 
   const estado = await leerEstado();
   const resultado = await db.transaction(async (tx) => {

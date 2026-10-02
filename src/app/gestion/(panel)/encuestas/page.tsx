@@ -18,7 +18,7 @@ export default async function Encuestas() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-3xl font-extrabold text-azul">Encuestas</h1>
+        <h1 className="titulo text-[30px]">Encuestas</h1>
         <p className="mt-1 text-base text-gris-texto">
           Instrumento {VERSION_INSTRUMENTO}. Revise la redacción y el diseño sin usar credenciales: en la vista
           previa no se guarda ninguna respuesta ni cambia el avance. En «Ver preguntas y observaciones» cada
@@ -29,14 +29,14 @@ export default async function Encuestas() {
         {ORDEN.map((e) => {
           const enc = ENCUESTAS[e];
           return (
-            <section key={e} className="rounded-[24px] bg-tarjeta border border-borde p-5 flex flex-col gap-3">
-              <h2 className="text-xl font-extrabold">{enc.titulo}</h2>
+            <section key={e} className="rounded-[3px] bg-tarjeta border border-borde p-5 flex flex-col gap-3">
+              <h2 className="rotulo text-[17px]">{enc.titulo}</h2>
               <p className="text-base text-gris-texto">
                 {preguntasDe(enc).length} preguntas · unos {enc.minutos} minutos
               </p>
               <p className="text-base">
                 {pendientes(e) > 0 ? (
-                  <span className="rounded-full bg-amarillo px-2.5 py-0.5 font-bold">
+                  <span className="sello text-lacre text-[13px]">
                     {pendientes(e)} {pendientes(e) === 1 ? "observación pendiente" : "observaciones pendientes"}
                   </span>
                 ) : (
@@ -46,13 +46,13 @@ export default async function Encuestas() {
               <div className="mt-auto flex flex-col gap-2">
                 <Link
                   href={`/gestion/vista-previa/${e}`}
-                  className="rounded-full bg-verde-profundo text-white text-center px-5 py-2.5 font-bold"
+                  className="boton boton-primario no-underline"
                 >
                   Recorrer como participante
                 </Link>
                 <Link
                   href={`/gestion/encuestas/${e}`}
-                  className="rounded-full border-2 border-verde-profundo text-verde-profundo text-center px-5 py-2.5 font-bold"
+                  className="boton boton-secundario no-underline"
                 >
                   Ver preguntas y observaciones
                 </Link>

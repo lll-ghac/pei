@@ -11,12 +11,12 @@ export default async function PanelInicio(props: PageProps<"/gestion">) {
   return (
     <div className="space-y-5">
       {error === "permiso" && (
-        <p role="alert" className="rounded-xl bg-error/10 text-error font-semibold px-3 py-2">
+        <p role="alert" className="rounded-[2px] bg-error/10 text-error font-semibold px-3 py-2">
           Esa sección es solo para administración.
         </p>
       )}
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h1 className="text-3xl font-extrabold text-azul">Avance</h1>
+        <h1 className="titulo text-[30px]">Avance</h1>
         <p className="text-base">
           Modo <strong>{estado.modo === "prueba" ? "Prueba" : "Oficial"}</strong>
           {estado.modo === "oficial" && <> · periodo <strong>{estado.abierta ? "abierto" : "cerrado"}</strong></>}
@@ -26,7 +26,7 @@ export default async function PanelInicio(props: PageProps<"/gestion">) {
           {fallidos > 30 && " · revise si hay intentos de adivinar credenciales"}
         </p>
       </div>
-      <p className="rounded-xl bg-azul/8 px-3 py-2 text-base">
+      <p className="rounded-[2px] bg-timbre-claro px-3 py-2 text-base">
         Esta vista muestra cuántas credenciales se usaron por curso. Nadie sabe qué credencial recibió cada
         persona. Los resultados se abren cuando se cierra la encuesta.
       </p>

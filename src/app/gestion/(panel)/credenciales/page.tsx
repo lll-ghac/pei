@@ -32,7 +32,7 @@ export default async function Credenciales() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold text-azul">Credenciales</h1>
+        <h1 className="titulo text-[30px]">Credenciales</h1>
         <p className="mt-1 text-base text-gris-texto">
           Las credenciales se generan por lotes (un curso y un estamento) y se imprimen en papeletas que se
           reparten al azar. Nadie anota qué papeleta recibe cada persona.
@@ -40,8 +40,8 @@ export default async function Credenciales() {
       </div>
 
       {g.rol === "admin" && (
-        <section className="rounded-[24px] bg-tarjeta border border-borde p-5">
-          <h2 className="text-xl font-extrabold">Generar un lote</h2>
+        <section className="rounded-[3px] bg-tarjeta border border-borde p-5">
+          <h2 className="rotulo text-[17px]">Generar un lote</h2>
           <p className="text-base text-gris-texto mb-3">
             La cantidad sugerida es la matrícula + 10% de reserva. Las de prueba llevan el prefijo PRUEBA- y solo funcionan en
             modo Prueba; las oficiales solo funcionan en modo Oficial con el periodo abierto.
@@ -61,11 +61,11 @@ export default async function Credenciales() {
       )}
 
       <section>
-        <h2 className="text-xl font-extrabold mb-2">Lotes</h2>
+        <h2 className="rotulo text-[17px] mb-2">Lotes</h2>
         {lotes.length === 0 ? (
           <p className="text-gris-texto">Aún no hay credenciales generadas.</p>
         ) : (
-          <div className="overflow-x-auto rounded-[24px] bg-tarjeta border border-borde">
+          <div className="overflow-x-auto rounded-[3px] bg-tarjeta border border-borde">
             <table className="w-full text-base">
               <thead>
                 <tr className="text-left border-b border-borde">
@@ -84,7 +84,7 @@ export default async function Credenciales() {
                     <td className="px-3 py-2 font-bold">{l.id}</td>
                     <td className="px-3 py-2">
                       {l.prueba ? (
-                        <span className="rounded-full bg-amarillo px-2 py-0.5 text-sm font-bold">PRUEBA</span>
+                        <span className="sello text-lacre text-[12px]">PRUEBA</span>
                       ) : (
                         "Oficial"
                       )}

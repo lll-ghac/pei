@@ -3,7 +3,7 @@ import { leerEstado } from "@/lib/estado";
 import { exigirGestor } from "@/lib/gestion";
 import { guardarCurso, guardarFuncionarios } from "../../acciones";
 
-const campo = "w-20 rounded-lg border-2 border-borde bg-tarjeta px-2 py-1.5 text-base tabular-nums";
+const campo = "w-20 rounded-[2px] border border-grafito bg-tarjeta px-2 py-1.5 text-base tabular-nums";
 
 export default async function Cursos() {
   await exigirGestor("admin");
@@ -15,7 +15,7 @@ export default async function Cursos() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold text-azul">Cursos y matrícula</h1>
+        <h1 className="titulo text-[30px]">Cursos y matrícula</h1>
         <p className="mt-1 text-base text-gris-texto">
           Sin nombres: solo la cantidad de estudiantes. Un curso con matrícula 0 queda inactivo. La columna
           «Papeletas apoderados» es el número que informa el profesor jefe (sin nombres); si se deja vacía, el
@@ -23,7 +23,7 @@ export default async function Cursos() {
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-[24px] bg-tarjeta border border-borde">
+      <div className="overflow-x-auto rounded-[3px] bg-tarjeta border border-borde">
         <table className="w-full text-base">
           <thead>
             <tr className="text-left border-b border-borde">
@@ -63,7 +63,7 @@ export default async function Cursos() {
                       aria-label={`Papeletas de apoderados entregadas en ${c.nombre}`}
                       className={campo}
                     />
-                    <button type="submit" className="rounded-full border-2 border-verde-profundo text-verde-profundo px-3 py-1 font-bold">
+                    <button type="submit" className="boton boton-secundario !min-h-10 !py-1.5 !px-3 text-[16px]">
                       Guardar
                     </button>
                   </form>
@@ -74,12 +74,12 @@ export default async function Cursos() {
         </table>
       </div>
 
-      <form action={guardarFuncionarios} className="rounded-[24px] bg-tarjeta border border-borde p-4 flex flex-wrap items-center gap-3">
+      <form action={guardarFuncionarios} className="rounded-[3px] bg-tarjeta border border-borde p-4 flex flex-wrap items-center gap-3">
         <label htmlFor="total" className="font-bold">
           Total de funcionarios (docentes, asistentes y equipo directivo)
         </label>
         <input id="total" name="total" type="number" min={0} max={500} defaultValue={estado.funcionariosTotal} className={campo} />
-        <button type="submit" className="rounded-full border-2 border-verde-profundo text-verde-profundo px-3 py-1 font-bold">
+        <button type="submit" className="boton boton-secundario !min-h-10 !py-1.5 !px-3 text-[16px]">
           Guardar
         </button>
       </form>

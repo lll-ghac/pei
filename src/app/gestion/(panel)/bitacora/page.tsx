@@ -15,9 +15,9 @@ export default async function Bitacora() {
   const filas = await db.select().from(schema.bitacora).orderBy(desc(schema.bitacora.id)).limit(300);
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-extrabold text-azul">Bitácora del proceso</h1>
+      <h1 className="titulo text-[30px]">Bitácora del proceso</h1>
       <p className="text-base text-gris-texto">Instrumento: {VERSION_INSTRUMENTO}. Últimos 300 registros.</p>
-      <div className="overflow-x-auto rounded-[24px] bg-tarjeta border border-borde">
+      <div className="overflow-x-auto rounded-[3px] bg-tarjeta border border-borde">
         <table className="w-full text-base">
           <thead>
             <tr className="text-left border-b border-borde">

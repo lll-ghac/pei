@@ -4,7 +4,7 @@ import { useState } from "react";
 
 type Curso = { codigo: string; nombre: string; matricula: number; tieneEstudiantes: boolean };
 
-const campo = "w-full min-w-0 rounded-xl border-2 border-borde bg-tarjeta px-3 py-2.5 text-base";
+const campo = "w-full min-w-0 rounded-[2px] border border-grafito bg-tarjeta px-3 py-2.5 text-base";
 const etiqueta = "grid gap-1 min-w-0 font-bold text-base";
 
 /** Campos del formulario de lotes: el curso depende del estamento elegido. */

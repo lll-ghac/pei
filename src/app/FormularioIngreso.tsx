@@ -1,9 +1,15 @@
 "use client";
 
-import { ArrowRight, LockKey } from "@phosphor-icons/react";
+import { ArrowRight } from "@phosphor-icons/react";
 import { startTransition, useActionState } from "react";
 import { ingresar, type EstadoIngreso } from "./acciones";
 
+const recuadro =
+  "block border border-tinta bg-papel px-3 pt-1.5 pb-2 focus-within:outline focus-within:outline-3 focus-within:outline-timbre";
+const entrada =
+  "w-full bg-transparent font-[family-name:var(--font-credencial)] font-bold text-[24px] tracking-[0.12em] uppercase text-tinta placeholder:text-filete placeholder:tracking-[0.08em] focus:outline-none";
+
+/** Ingreso con la papeleta: los recuadros imitan los de la papeleta impresa. */
 export function FormularioIngreso() {
   const [estado, accion, enviando] = useActionState<EstadoIngreso, FormData>(ingresar, {});
 
@@ -15,11 +21,11 @@ export function FormularioIngreso() {
         const datos = new FormData(e.currentTarget);
         startTransition(() => accion(datos));
       }}
-      className="space-y-4" noValidate>
-      <div>
-        <label htmlFor="usuario" className="block font-bold mb-1">
-          Usuario
-        </label>
+      className="space-y-3"
+      noValidate
+    >
+      <label className={recuadro}>
+        <span className="rotulo block text-[13px] text-grafito">Usuario</span>
         <input
           id="usuario"
           name="usuario"
@@ -27,15 +33,13 @@ export function FormularioIngreso() {
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
-          placeholder="Ej.: 5A-K7P3"
-          className="w-full rounded-2xl border-2 border-borde bg-tarjeta px-4 py-3 text-xl font-bold tracking-wider uppercase focus:border-azul"
+          placeholder="5A-K7P3"
+          className={entrada}
           required
         />
-      </div>
-      <div>
-        <label htmlFor="clave" className="block font-bold mb-1">
-          Contraseña
-        </label>
+      </label>
+      <label className={recuadro}>
+        <span className="rotulo block text-[13px] text-grafito">Contraseña</span>
         <input
           id="clave"
           name="clave"
@@ -43,25 +47,21 @@ export function FormularioIngreso() {
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
-          className="w-full rounded-2xl border-2 border-borde bg-tarjeta px-4 py-3 text-xl font-bold tracking-widest uppercase focus:border-azul"
+          className={entrada}
           required
         />
-      </div>
+      </label>
 
       {estado.error && (
-        <p role="alert" className="rounded-2xl bg-error/10 text-error font-semibold px-4 py-3">
-          {estado.error}
-        </p>
+        <div role="alert" className="flex items-start gap-3 border border-lacre bg-lacre-claro px-4 py-3">
+          <span className="sello text-lacre text-[12px] mt-0.5 shrink-0">Revise</span>
+          <span>{estado.error}</span>
+        </div>
       )}
 
-      <button
-        type="submit"
-        disabled={enviando}
-        className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-verde-profundo text-white text-xl font-bold px-6 py-4 min-h-14 disabled:opacity-60"
-      >
-        <LockKey size={24} weight="bold" aria-hidden />
-        {enviando ? "Revisando…" : "Entrar a la encuesta"}
-        <ArrowRight size={24} weight="bold" aria-hidden />
+      <button type="submit" disabled={enviando} className="boton boton-primario w-full text-[19px]">
+        {enviando ? "Revisando la papeleta…" : "Entrar a la encuesta"}
+        <ArrowRight size={20} weight="bold" aria-hidden />
       </button>
     </form>
   );

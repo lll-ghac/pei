@@ -1,3 +1,4 @@
+import { ArrowLeft } from "@phosphor-icons/react/ssr";
 import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -32,19 +33,19 @@ export default async function VistaLote(props: PageProps<"/gestion/credenciales/
 
   return (
     <div className="space-y-5">
-      <Link href="/gestion/credenciales" className="text-azul underline font-bold">
-        ← Volver a credenciales
+      <Link href="/gestion/credenciales" className="inline-flex items-center gap-1.5 text-timbre underline font-bold">
+        <ArrowLeft size={18} weight="bold" aria-hidden /> Volver a credenciales
       </Link>
-      <h1 className="text-3xl font-extrabold text-azul">
+      <h1 className="titulo text-[30px]">
         Lote {id} · {NOMBRE_ESTAMENTO[lote.lote.estamento as Estamento]}
         {lote.curso ? ` · ${lote.curso}` : ""}
-        {lote.lote.prueba && <span className="ml-2 align-middle rounded-full bg-amarillo px-2 py-0.5 text-base">PRUEBA</span>}
+        {lote.lote.prueba && <span className="ml-2 align-middle sello text-lacre text-[14px]">PRUEBA</span>}
       </h1>
       <p className="text-lg">
         <strong>{n("usada")}</strong> usadas · <strong>{n("sin_usar")}</strong> sin usar ·{" "}
         <strong>{n("desactivada")}</strong> desactivadas
       </p>
-      <p className="rounded-xl bg-azul/8 px-3 py-2 text-base">
+      <p className="rounded-[2px] bg-timbre-claro px-3 py-2 text-base">
         Esta vista muestra cuántas credenciales se usaron. Nadie sabe qué credencial recibió cada persona, así
         que no permite saber quién falta por responder. Sirve para contar y para desactivar las papeletas
         sobrantes que se devuelven.
@@ -57,7 +58,7 @@ export default async function VistaLote(props: PageProps<"/gestion/credenciales/
             const color = COLORES[c.estado];
             return (
               <li key={c.id}>
-                <label className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2 ${color.clase}`}>
+                <label className={`flex items-center gap-2 rounded-[2px] border-2 px-3 py-2 ${color.clase}`}>
                   {c.estado === "sin_usar" && (
                     <input type="checkbox" name="credencial" value={c.id} className="size-5" aria-label={`Marcar ${c.usuario} como sobrante`} />
                   )}
@@ -69,7 +70,7 @@ export default async function VistaLote(props: PageProps<"/gestion/credenciales/
           })}
         </ul>
         {n("sin_usar") > 0 && (
-          <button type="submit" className="rounded-full bg-grafito text-white px-5 py-2.5 font-bold">
+          <button type="submit" className="boton bg-tinta text-papel">
             Desactivar las marcadas (papeletas sobrantes devueltas)
           </button>
         )}

@@ -27,29 +27,31 @@ export default async function LayoutPanel({ children }: LayoutProps<"/gestion">)
     <div className="flex-1 flex flex-col">
       <FranjaPrueba visible={estado.modo === "prueba"} />
       <Cabecera
+        ancho="ancho"
+        detalle={`Panel · ${g.nombre} · ${g.rol === "admin" ? "Administración" : "Comisión"}`}
         derecha={
-          <form action={salirGestion} className="flex items-center gap-2">
-            <span className="hidden sm:inline text-sm text-gris-texto">
-              {g.nombre} · {g.rol === "admin" ? "Administración" : "Comisión"}
-            </span>
-            <button type="submit" className="rounded-full border-2 border-borde px-3 py-1.5 font-bold text-base">
+          <form action={salirGestion}>
+            <button type="submit" className="rounded-[2px] px-3 min-h-12 font-bold text-white/85 hover:bg-white/10">
               Salir
             </button>
           </form>
         }
       />
-      <nav className="bg-tarjeta border-b border-borde" aria-label="Secciones del panel">
-        <ul className="mx-auto max-w-5xl flex flex-wrap gap-1 px-4">
+      <nav className="bg-papel border-b border-filete" aria-label="Secciones del panel">
+        <ul className="mx-auto max-w-6xl flex flex-wrap px-2 sm:px-4">
           {enlaces.map((e) => (
             <li key={e.href}>
-              <Link href={e.href} className="inline-block px-3 py-3 font-bold text-azul hover:underline">
+              <Link
+                href={e.href}
+                className="rotulo inline-block px-3 py-3.5 text-[15px] text-tinta no-underline hover:text-timbre hover:underline"
+              >
                 {e.texto}
               </Link>
             </li>
           ))}
         </ul>
       </nav>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-7">{children}</main>
     </div>
   );
 }

@@ -6,10 +6,10 @@ export const metadata = { title: "¿Cómo protegemos tu anonimato? · Encuesta P
 export default function Anonimato() {
   return (
     <div className="flex-1 flex flex-col">
-      <Cabecera />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-        <article className="rounded-[24px] bg-tarjeta border border-borde p-6 sm:p-8 shadow-sm space-y-4">
-          <h1 className="text-3xl font-extrabold text-azul">¿Cómo protegemos tu anonimato?</h1>
+      <Cabecera ancho="documento" />
+      <main className="mx-auto w-full max-w-3xl flex-1 sm:px-4 py-6 sm:py-10">
+        <article className="bg-papel border-y sm:border border-filete px-5 py-7 sm:px-10 sm:py-10 space-y-4 [&>p]:max-w-[68ch]">
+          <h1 className="titulo text-[30px]">¿Cómo protegemos tu anonimato?</h1>
           <p>
             Las papeletas se reparten <strong>al azar</strong>, desde una bolsa. Nadie anota cuál recibe cada
             persona, igual que en una votación.
@@ -17,13 +17,13 @@ export default function Anonimato() {
           <p>La plataforma guarda la información en dos lugares separados:</p>
 
           <div className="grid gap-3 sm:grid-cols-2" role="img" aria-label="Esquema: el padrón y la urna no tienen ningún vínculo">
-            <div className="rounded-2xl border-2 border-azul p-4">
-              <p className="font-extrabold text-azul">Padrón</p>
+            <div className="border border-timbre p-4">
+              <p className="rotulo text-[18px] text-timbre">Padrón</p>
               <p className="text-base">Credencial, curso y si ya respondió (sí o no).</p>
               <p className="text-base text-gris-texto">No guarda respuestas.</p>
             </div>
-            <div className="rounded-2xl border-2 border-verde-profundo p-4">
-              <p className="font-extrabold text-verde-profundo">Urna</p>
+            <div className="border border-grafito p-4">
+              <p className="rotulo text-[18px] text-tinta">Urna</p>
               <p className="text-base">Respuestas, con curso y estamento.</p>
               <p className="text-base text-gris-texto">No guarda la credencial, ni la fecha, ni la hora.</p>
             </div>
@@ -44,7 +44,7 @@ export default function Anonimato() {
             <li>El avance no se guarda en el equipo: al enviar o salir, no queda rastro de tus respuestas.</li>
           </ul>
           <p>
-            <Link href="/privacidad" className="text-azul underline font-semibold">
+            <Link href="/privacidad" className="text-timbre underline font-bold">
               Ver la página de privacidad
             </Link>
           </p>

@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-02T12:00:00Z",
+  "title": "Design System: Encuesta PEI 2027",
+  "extensions": {
+    "colorMeta": {
+      "verde": { "role": "primary", "displayName": "Verde Escuela", "canonical": "#92b01a", "tonalRamp": ["#1f2a05", "#344408", "#4a5c0c", "#6a8212", "#92b01a", "#b5cc5a", "#d6e5a0", "#eef4d6"] },
+      "verde-hover": { "role": "primary", "displayName": "Verde Escuela Hondo", "canonical": "#86a316" },
+      "verde-oscuro": { "role": "primary", "displayName": "Verde Noche", "canonical": "#1f2a05" },
+      "verde-tinta": { "role": "primary", "displayName": "Verde Tinta", "canonical": "#4a5c0c" },
+      "verde-claro": { "role": "primary", "displayName": "Verde Fila", "canonical": "#eef4d6" },
+      "timbre": { "role": "secondary", "displayName": "Azul de Timbre", "canonical": "#22357f", "tonalRamp": ["#0d1433", "#16234f", "#22357f", "#3a4f9e", "#6475b8", "#97a3d0", "#c5cce6", "#e6e9f4"] },
+      "timbre-claro": { "role": "secondary", "displayName": "Timbre Lavado", "canonical": "#e6e9f4" },
+      "lacre": { "role": "tertiary", "displayName": "Lacre", "canonical": "#a3271f", "tonalRamp": ["#3a0d0a", "#5e1712", "#a3271f", "#c24d44", "#d67d76", "#e6aba6", "#f0cfcc", "#f7e4e2"] },
+      "lacre-claro": { "role": "tertiary", "displayName": "Lacre Lavado", "canonical": "#f7e4e2" },
+      "ocre-claro": { "role": "tertiary", "displayName": "Ocre Pálido", "canonical": "#f4e7c2" },
+      "papel": { "role": "neutral", "displayName": "Papel", "canonical": "#ffffff" },
+      "fondo": { "role": "neutral", "displayName": "Mesa Gris Papel", "canonical": "#eceeea" },
+      "tinta": { "role": "neutral", "displayName": "Tinta", "canonical": "#16181a", "tonalRamp": ["#16181a", "#2a2d30", "#3d4145", "#5c6166", "#868b8f", "#c9ccc6", "#eceeea", "#ffffff"] },
+      "grafito": { "role": "neutral", "displayName": "Grafito", "canonical": "#3d4145" },
+      "gris-texto": { "role": "neutral", "displayName": "Gris Texto", "canonical": "#5c6166" },
+      "filete": { "role": "neutral", "displayName": "Filete", "canonical": "#c9ccc6" }
+    },
+    "compatAliases": [
+      { "name": "azul", "value": "var(--color-timbre)" },
+      { "name": "amarillo", "value": "var(--color-ocre-claro)" },
+      { "name": "tarjeta", "value": "var(--color-papel)" },
+      { "name": "borde", "value": "var(--color-filete)" },
+      { "name": "error", "value": "var(--color-lacre)" },
+      { "name": "verde-profundo", "value": "var(--color-verde-tinta)" }
+    ],
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Título de la portada de la encuesta; 30 px en celular, 36 px en escritorio." },
+      "headline": { "displayName": "Headline", "purpose": "Texto de cada pregunta; 24 px en celular, 28 px en escritorio." },
+      "body": { "displayName": "Body", "purpose": "Opciones y párrafos; 700 en la opción elegida; cifras tabulares." },
+      "body-secondary": { "displayName": "Body secundario", "purpose": "Indicaciones, contadores y avisos; piso del texto de la encuesta." },
+      "label": { "displayName": "Rótulo impreso", "purpose": "Archivo angosta en mayúsculas: números de opción, avance, banda, encabezados de tabla (13–20 px; 32 px en el número de pregunta)." },
+      "stamp": { "displayName": "Sello", "purpose": "Texto de los sellos de borde doble (12–15 px)." },
+      "credential": { "displayName": "Credencial", "purpose": "Solo usuario y contraseña en el ingreso." },
+      "button": { "displayName": "Botón", "purpose": "Etiquetas de botones de bloque." }
+    },
+    "shadows": [
+      { "name": "canto-del-bloque", "value": "inset 0 -2px 0 rgb(31 42 5 / 0.25)", "purpose": "Único caso de sombra: canto inferior del botón principal." }
+    ],
+    "focus": [
+      { "name": "anillo-timbre", "value": "outline: 3px solid #22357f; outline-offset: 2px", "purpose": "Foco visible global; en campos el desfase es 0." }
+    ],
+    "motion": [
+      { "name": "ease-salida", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Raya de lápiz y compresión de botones." },
+      { "name": "ease-movimiento", "value": "cubic-bezier(0.77, 0, 0.175, 1)", "purpose": "Doblez de la papeleta." },
+      { "name": "raya-de-lapiz", "value": "190ms ease-salida (stroke-dashoffset 60 → 0)", "purpose": "Se dibuja al marcar una opción; con reduced-motion aparece ya dibujada." },
+      { "name": "doblez-papeleta", "value": "420ms ease-movimiento (rotateX 0 → 78deg, baja 55 %, se desvanece)", "purpose": "Al enviar; con reduced-motion, desvanecido de 200 ms." },
+      { "name": "compresion-boton", "value": "140ms ease-salida, scale(0.97)", "purpose": "Al presionar un botón de bloque; se anula con reduced-motion." },
+      { "name": "fila-hover", "value": "150ms color", "purpose": "Cambio de fondo de la fila de cédula." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" }
+    ],
+    "theme": "light-only"
+  },
+  "components": [
+    {
+      "name": "Botón principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Única acción principal por pantalla: Siguiente, Enviar, Ingresar.",
+      "html": "<button class=\"ds-boton ds-boton-primario\">Siguiente</button>",
+      "css": ".ds-boton { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 3.25rem; padding: 0.75rem 1.4rem; border: 0; border-radius: 3px; font-family: 'Atkinson Hyperlegible Next', 'Segoe UI', Arial, sans-serif; font-weight: 700; font-size: 1.05rem; cursor: pointer; transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1), background-color 140ms ease; } .ds-boton:active { transform: scale(0.97); } .ds-boton:focus-visible { outline: 3px solid #22357f; outline-offset: 2px; } .ds-boton-primario { background: #92b01a; color: #1f2a05; box-shadow: inset 0 -2px 0 rgb(31 42 5 / 0.25); } .ds-boton-primario:hover { background: #86a316; }"
+    },
+    {
+      "name": "Botón secundario",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Acciones de retorno: Anterior, Volver.",
+      "html": "<button class=\"ds-boton2\">Anterior</button>",
+      "css": ".ds-boton2 { display: inline-flex; align-items: center; justify-content: center; min-height: 3.25rem; padding: 0.75rem 1.4rem; border-radius: 3px; background: #ffffff; color: #16181a; border: 1px solid #3d4145; font-family: 'Atkinson Hyperlegible Next', 'Segoe UI', Arial, sans-serif; font-weight: 700; font-size: 1.05rem; cursor: pointer; transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1), background-color 140ms ease; } .ds-boton2:hover { background: #eceeea; } .ds-boton2:active { transform: scale(0.97); } .ds-boton2:focus-visible { outline: 3px solid #22357f; outline-offset: 2px; }"
+    },
+    {
+      "name": "Campo",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Respuesta abierta y detalle de «Otra».",
+      "html": "<input class=\"ds-campo\" placeholder=\"Escriba aquí\" />",
+      "css": ".ds-campo { width: 100%; border: 1px solid #3d4145; border-radius: 2px; background: #ffffff; color: #16181a; padding: 0.7rem 0.85rem; font-family: 'Atkinson Hyperlegible Next', 'Segoe UI', Arial, sans-serif; font-size: 1.05rem; } .ds-campo:focus { outline: 3px solid #22357f; outline-offset: 0; }"
+    },
+    {
+      "name": "Banda de timbre",
+      "kind": "nav",
+      "refersTo": "stamp-band",
+      "description": "Cabecera azul con escudo y línea de corte perforada debajo.",
+      "html": "<header><div class=\"ds-banda\"><span class=\"ds-escudo\"></span><span class=\"ds-banda-titulo\">Encuesta PEI 2027</span><a class=\"ds-banda-ayuda\" href=\"#\">Ayuda</a></div><div class=\"ds-perforado\"></div></header>",
+      "css": ".ds-banda { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 16px; background: #22357f; color: #fff; } .ds-escudo { width: 40px; height: 40px; border-radius: 2px; background: #fff; } .ds-banda-titulo { font-family: Archivo, 'Arial Narrow', Arial, sans-serif; font-stretch: 75%; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 15px; } .ds-banda-ayuda { margin-left: auto; color: #fff; font-weight: 700; text-decoration: none; padding: 0 12px; min-height: 44px; display: inline-flex; align-items: center; border-radius: 2px; } .ds-banda-ayuda:hover { background: rgb(255 255 255 / 0.1); } .ds-banda-ayuda:focus-visible { outline: 3px solid #fff; outline-offset: 2px; } .ds-perforado { height: 10px; background-color: #fff; background-image: radial-gradient(circle at 5px 5px, #eceeea 2.4px, transparent 2.6px); background-size: 14px 10px; }"
+    },
+    {
+      "name": "Fila de cédula",
+      "kind": "custom",
+      "refersTo": "ballot-row",
+      "description": "Opción numerada a todo el ancho; al elegir, fondo verde fila y raya de lápiz grafito sobre la marca.",
+      "html": "<div class=\"ds-cedula\"><button class=\"ds-fila\" role=\"radio\" aria-checked=\"false\"><span class=\"ds-num\">1</span><span>Muy de acuerdo</span><svg viewBox=\"0 0 32 32\" width=\"32\" height=\"32\"><circle cx=\"16\" cy=\"16\" r=\"10\" fill=\"#fff\" stroke=\"#3d4145\" stroke-width=\"1.6\"/></svg></button><button class=\"ds-fila ds-fila-activa\" role=\"radio\" aria-checked=\"true\"><span class=\"ds-num\">2</span><span>De acuerdo</span><svg viewBox=\"0 0 32 32\" width=\"32\" height=\"32\"><circle cx=\"16\" cy=\"16\" r=\"10\" fill=\"#fff\" stroke=\"#4a5c0c\" stroke-width=\"2.2\"/><path class=\"ds-raya\" d=\"M17.4 1.6 C16.2 8.5 17.1 14.2 16.1 20.4 C15.6 24.3 15.9 27.6 14.9 30.6\" fill=\"none\" stroke=\"#3d4145\" stroke-width=\"3.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button></div>",
+      "css": ".ds-cedula { background: #fff; border-top: 1px solid #c9ccc6; } .ds-fila { width: 100%; display: grid; grid-template-columns: 2.25rem 1fr 2rem; align-items: center; gap: 12px; padding: 14px 32px; min-height: 60px; text-align: left; border: 0; border-bottom: 1px solid #c9ccc6; background: #fff; color: #16181a; font-family: 'Atkinson Hyperlegible Next', 'Segoe UI', Arial, sans-serif; font-size: 19px; cursor: pointer; transition: background-color 150ms; } .ds-fila:hover { background: rgb(236 238 234 / 0.7); } .ds-fila:focus-visible { outline: 3px solid #22357f; outline-offset: 2px; } .ds-fila-activa, .ds-fila-activa:hover { background: #eef4d6; font-weight: 700; } .ds-num { font-family: Archivo, 'Arial Narrow', Arial, sans-serif; font-stretch: 75%; font-weight: 700; font-size: 18px; color: #5c6166; } .ds-fila-activa .ds-num { color: #16181a; } .ds-raya { stroke-dasharray: 60; stroke-dashoffset: 60; animation: ds-dibujar 190ms cubic-bezier(0.23, 1, 0.32, 1) forwards; } @keyframes ds-dibujar { to { stroke-dashoffset: 0; } } @media (prefers-reduced-motion: reduce) { .ds-raya { animation: none; stroke-dashoffset: 0; } }"
+    },
+    {
+      "name": "Sello",
+      "kind": "chip",
+      "description": "Estado con borde doble: timbre para informar, lacre para observar.",
+      "html": "<span class=\"ds-sello\" style=\"color:#22357f\">Voto secreto</span> <span class=\"ds-sello\" style=\"color:#a3271f\">Falta</span>",
+      "css": ".ds-sello { display: inline-block; font-family: Archivo, 'Arial Narrow', Arial, sans-serif; font-stretch: 75%; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; font-size: 15px; line-height: 1.3; border: 1.5px solid currentColor; outline: 1px solid currentColor; outline-offset: 2px; padding: 0.1em 0.5em; margin: 4px; }"
+    },
+    {
+      "name": "Casilla de credencial",
+      "kind": "input",
+      "refersTo": "credential-box",
+      "description": "Usuario y contraseña en letra de máquina.",
+      "html": "<label class=\"ds-casilla\"><span class=\"ds-casilla-rotulo\">Usuario</span><input class=\"ds-casilla-entrada\" placeholder=\"ABC123\" /></label>",
+      "css": ".ds-casilla { display: block; border: 1px solid #16181a; background: #fff; padding: 6px 12px 8px; } .ds-casilla:focus-within { outline: 3px solid #22357f; } .ds-casilla-rotulo { display: block; font-family: Archivo, 'Arial Narrow', Arial, sans-serif; font-stretch: 75%; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 13px; color: #3d4145; } .ds-casilla-entrada { width: 100%; border: 0; background: transparent; font-family: 'Courier Prime', 'Courier New', monospace; font-weight: 700; font-size: 24px; letter-spacing: 0.12em; text-transform: uppercase; color: #16181a; } .ds-casilla-entrada::placeholder { color: #c9ccc6; letter-spacing: 0.08em; } .ds-casilla-entrada:focus { outline: none; }"
+    },
+    {
+      "name": "Acta de avance",
+      "kind": "card",
+      "refersTo": "record-table-head",
+      "description": "Tabla del panel leída como acta de mesa.",
+      "html": "<table class=\"ds-acta\"><thead><tr><th>Curso</th><th>Respuestas</th></tr></thead><tbody><tr><td>5.º básico</td><td class=\"ds-cifra\">18 / 32</td></tr><tr><td>6.º básico</td><td class=\"ds-cifra\">25 / 30</td></tr></tbody></table>",
+      "css": ".ds-acta { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #c9ccc6; font-family: 'Atkinson Hyperlegible Next', 'Segoe UI', Arial, sans-serif; font-size: 17px; font-variant-numeric: tabular-nums; color: #16181a; } .ds-acta thead tr { background: #16181a; color: #fff; text-align: left; } .ds-acta th { font-family: Archivo, 'Arial Narrow', Arial, sans-serif; font-stretch: 75%; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 14px; padding: 10px 12px; } .ds-acta td { padding: 10px 12px; border-top: 1px solid #c9ccc6; } .ds-acta tbody { border-bottom: 2px solid #16181a; } .ds-cifra { text-align: right; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Cédula y urna",
+    "overview": "Cada respuesta es un voto secreto, y la interfaz lo dice con su aspecto antes que con palabras. La encuesta es una hoja de papel blanco frío sobre una mesa gris papel: una banda azul de timbre arriba con el escudo, una línea de corte perforada debajo, opciones numeradas en filas separadas por filetes de 1 px y un círculo o un cuadrado a la derecha para marcar. Al elegir, una raya de lápiz grafito cruza la marca; al enviar, la papeleta se dobla y cae en la urna.\n\nEl sistema es impreso, plano y sobrio. Densidad de formulario oficial: filas a todo el ancho de la hoja, texto grande y muy legible (pensado para apoderados en celular, a veces al sol, y para estudiantes de 10 a 14 años en el laboratorio), cifras tabulares en todo el producto. El panel de la comisión se lee como un acta de mesa: tabla con encabezado en tinta, filetes y números alineados, sin adornos.\n\nRechazos confirmados: la plantilla de tarjetas blancas redondeadas con sombra, los botones píldora y los titulares azules sobre gris. Compromisos de marca que restringen lo visual: la insignia de la escuela (o el escudo E-79 recortado) siempre en la banda, y el verde escuela como único color de acción.",
+    "keyCharacteristics": [
+      "Papel blanco frío sobre fondo gris papel; tinta casi negra para leer.",
+      "Azul de timbre para banda, sellos, enlaces informativos y foco.",
+      "Verde escuela solo en lo que se puede tocar o ya se eligió.",
+      "Esquinas casi rectas (2–3 px), filetes de 1 px, sin sombras de elevación.",
+      "Tres voces tipográficas: lectura, rótulo impreso angosto y máquina de escribir.",
+      "Dos únicos movimientos con significado: la raya de lápiz y el doblez de la papeleta.",
+      "Solo tema claro."
+    ],
+    "rules": [
+      { "name": "The Verde Tocable Rule", "body": "El verde escuela aparece solo en lo que se puede tocar (botón principal) o en lo que ya se eligió (fila marcada, contorno de la marca). Nunca en titulares, decoración ni fondos de sección.", "section": "colors" },
+      { "name": "The Timbre Informa Rule", "body": "El azul de timbre informa y certifica (banda, sellos, enlaces, foco); no es color de acción principal. La acción es verde, el estado es sello.", "section": "colors" },
+      { "name": "The Dieciocho Rule", "body": "Todo texto que la persona lee al responder mide 18 px o más; el cuerpo base es 19 px. Solo los textos de la banda, las tablas del panel y los rótulos impresos bajan de ahí.", "section": "typography" },
+      { "name": "The Cifra Tabular Rule", "body": "Los números siempre van en cifras tabulares (activadas en `body`), para que el avance y el panel se lean como un acta.", "section": "typography" },
+      { "name": "The Cuarenta y Ocho Rule", "body": "Todo lo que se toca mide al menos 48 px de alto; botones de bloque 52 px, filas 60 px.", "section": "layout" },
+      { "name": "The Hoja Plana Rule", "body": "Nada flota. Si algo necesita separarse, recibe un filete, una banda o un cambio de papel, no una sombra.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do reservar el verde escuela (#92B01A) para el botón principal y lo ya elegido, siempre con texto verde noche.",
+      "Do separar con filetes de 1 px y capas de papel; esquinas de 2–3 px.",
+      "Do mantener el texto de la encuesta en 18 px o más y todo objetivo táctil en 48 px o más.",
+      "Do marcar la elección con la raya de lápiz grafito sobre un círculo (una opción) o un cuadrado (varias) blancos.",
+      "Do expresar estados con sellos de borde doble (timbre para informar, lacre para observar).",
+      "Do mostrar la insignia o el escudo en la banda de timbre, con la línea perforada debajo.",
+      "Do limitar el movimiento a la raya (≈190 ms) y al doblez (≈420 ms), ambos atenuados con `prefers-reduced-motion`."
+    ],
+    "donts": [
+      "Don't usar tarjetas redondeadas con sombra, botones píldora ni titulares azules sobre gris.",
+      "Don't poner sombras fuera del canto interior del botón principal.",
+      "Don't poner rótulos de antetítulo (eyebrows) sobre los títulos.",
+      "Don't usar verde escuela en titulares, decoración o fondos de sección, ni texto blanco sobre él.",
+      "Don't agregar tema oscuro: el producto es solo claro.",
+      "Don't usar Courier Prime fuera de las credenciales ni los alias antiguos (`azul`, `tarjeta`, `borde`…) en pantallas nuevas."
+    ]
+  }
+}

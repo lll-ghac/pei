@@ -10,58 +10,56 @@ export default async function Inicio() {
   const estado = await leerEstado();
 
   return (
-    <div className="fondo-formas flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col">
       <FranjaPrueba visible={estado.modo === "prueba"} />
-      <Cabecera derecha={<Ayuda />} />
+      <Cabecera ancho="medio" derecha={<Ayuda />} />
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 grid gap-8 md:grid-cols-[1fr_1fr] md:items-start">
-        <section className="text-center md:text-left">
-          <Image
-            src="/insignia.png"
-            alt=""
-            width={126}
-            height={112}
-            className="mx-auto md:mx-0"
-            priority
-          />
-          <h1 className="mt-4 text-3xl sm:text-4xl font-extrabold text-azul leading-tight">
-            Diseñando el futuro de nuestra escuela
-          </h1>
-          <p className="mt-3 text-lg">
-            Estamos actualizando el Proyecto Educativo (PEI) y queremos conocer tu opinión.
+      <main className="mx-auto w-full max-w-5xl flex-1 sm:px-4 py-6 sm:py-10 grid gap-6 md:grid-cols-[1.05fr_1fr] md:gap-10 md:items-start">
+        <section className="px-5 sm:px-0">
+          <div className="flex items-center gap-4">
+            <Image src="/insignia.png" alt="" width={84} height={75} priority />
+            <p className="text-[16px] text-grafito leading-snug">
+              Escuela República del Ecuador E‑79
+              <br />
+              Antofagasta
+            </p>
+          </div>
+          <h1 className="titulo mt-6 text-[34px] sm:text-[44px]">Diseñando el futuro de nuestra escuela</h1>
+          <p className="mt-4 max-w-[46ch]">
+            Estamos actualizando el Proyecto Educativo (PEI) y queremos conocer su opinión. Toma entre 10 y 20
+            minutos y se responde una sola vez con cada papeleta.
           </p>
-          <ul className="mt-4 space-y-1 text-base text-left inline-block">
-            <li>
-              <strong>Dura</strong> entre 10 y 20 minutos.
-            </li>
-            <li>
-              <strong>Es anónima:</strong> tu papeleta no tiene tu nombre.
-            </li>
-            <li>
-              <strong>Se responde una sola vez</strong> con cada papeleta.
-            </li>
-          </ul>
+          <div className="mt-6 flex items-start gap-4 border-t border-filete pt-5">
+            <span className="sello text-timbre text-[14px] shrink-0">Voto secreto</span>
+            <p className="text-[17px] text-grafito">
+              Las papeletas se reparten al azar y no llevan nombre. Nadie puede saber qué respondió cada
+              persona.{" "}
+              <Link className="text-timbre underline font-bold" href="/anonimato">
+                Cómo lo protegemos
+              </Link>
+            </p>
+          </div>
         </section>
 
-        <section className="rounded-[24px] bg-tarjeta border border-borde p-5 sm:p-7 shadow-sm">
-          <h2 className="text-2xl font-extrabold">Ingresa con tu papeleta</h2>
-          <p className="mt-1 mb-5 text-base text-gris-texto">
-            Escribe el usuario y la contraseña tal como aparecen en tu papeleta.
-          </p>
-          <FormularioIngreso />
-          <p className="mt-5 text-base text-gris-texto">
-            Su credencial solo sirve para contar cuántas personas han respondido por curso. No guarda su
-            nombre.
-          </p>
-          <p className="mt-3 text-base">
-            <Link className="text-azul underline font-semibold" href="/anonimato">
-              ¿Cómo protegemos tu anonimato?
-            </Link>{" "}
-            ·{" "}
-            <Link className="text-azul underline font-semibold" href="/privacidad">
-              Privacidad
-            </Link>
-          </p>
+        <section className="bg-papel border-y sm:border border-filete" aria-labelledby="titulo-ingreso">
+          <div className="border-b border-dashed border-grafito px-5 sm:px-7 py-4 flex items-baseline justify-between gap-3">
+            <h2 id="titulo-ingreso" className="rotulo text-[18px]">
+              Ingrese con su papeleta
+            </h2>
+            <span className="text-[14px] text-gris-texto">encuesta.escuelaecuador.cl</span>
+          </div>
+          <div className="px-5 sm:px-7 py-6">
+            <p className="mb-4 text-[17px] text-grafito">
+              Escriba el usuario y la contraseña tal como aparecen en su papeleta. Puede usar minúsculas.
+            </p>
+            <FormularioIngreso />
+            <p className="mt-5 text-[16px] text-gris-texto">
+              Su credencial solo sirve para contar cuántas personas han respondido por curso. No guarda su nombre.{" "}
+              <Link className="text-timbre underline" href="/privacidad">
+                Privacidad
+              </Link>
+            </p>
+          </div>
         </section>
       </main>
     </div>
