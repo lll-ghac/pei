@@ -12,7 +12,7 @@ import {
 } from "../../acciones";
 import { FormularioAviso } from "../../FormularioAviso";
 
-const campo = "w-full rounded-xl border-2 border-borde bg-tarjeta px-3 py-2 text-base";
+const campo = "w-full min-w-0 rounded-xl border-2 border-borde bg-tarjeta px-3 py-2 text-base";
 const tarjeta = "rounded-[24px] bg-tarjeta border border-borde p-5 space-y-3";
 
 export default async function Sistema() {
@@ -48,7 +48,7 @@ export default async function Sistema() {
                 respaldo automático.
               </p>
               <FormularioAviso accion={reiniciar} boton="Reiniciar a cero" peligro>
-                <label className="grid gap-1 text-base font-bold">
+                <label className="grid gap-1 min-w-0 text-base font-bold">
                   Escriba REINICIAR para confirmar
                   <input name="confirmacion" autoComplete="off" className={campo} />
                 </label>
@@ -61,7 +61,7 @@ export default async function Sistema() {
                 nadie borre respuestas reales por error. Después se abre el periodo oficial.
               </p>
               <FormularioAviso accion={pasarAOficial} boton="Pasar a Oficial">
-                <label className="grid gap-1 text-base font-bold">
+                <label className="grid gap-1 min-w-0 text-base font-bold">
                   Escriba OFICIAL para confirmar
                   <input name="confirmacion" autoComplete="off" className={campo} />
                 </label>
@@ -119,15 +119,15 @@ export default async function Sistema() {
         </div>
         <h3 className="font-extrabold pt-2">Crear cuenta</h3>
         <FormularioAviso accion={crearCuenta} boton="Crear cuenta" className="grid gap-3 sm:grid-cols-4 items-end">
-          <label className="grid gap-1 text-base font-bold">
+          <label className="grid gap-1 min-w-0 text-base font-bold">
             Usuario
             <input name="usuario" placeholder="ej. mperez" autoComplete="off" className={campo} />
           </label>
-          <label className="grid gap-1 text-base font-bold">
+          <label className="grid gap-1 min-w-0 text-base font-bold">
             Nombre
             <input name="nombre" autoComplete="off" className={campo} />
           </label>
-          <label className="grid gap-1 text-base font-bold">
+          <label className="grid gap-1 min-w-0 text-base font-bold">
             Rol
             <select name="rol" className={campo}>
               <option value="comision">Comisión</option>
@@ -140,11 +140,11 @@ export default async function Sistema() {
       <section className={tarjeta}>
         <h2 className="text-xl font-extrabold">Mi contraseña</h2>
         <FormularioAviso accion={cambiarClavePropia} boton="Cambiar contraseña" className="grid gap-3 sm:grid-cols-3 items-end">
-          <label className="grid gap-1 text-base font-bold">
+          <label className="grid gap-1 min-w-0 text-base font-bold">
             Actual
             <input name="actual" type="password" autoComplete="current-password" className={campo} />
           </label>
-          <label className="grid gap-1 text-base font-bold">
+          <label className="grid gap-1 min-w-0 text-base font-bold">
             Nueva (mínimo 12 caracteres)
             <input name="nueva" type="password" autoComplete="new-password" className={campo} />
           </label>

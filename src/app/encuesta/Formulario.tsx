@@ -10,6 +10,7 @@ import {
   SmileySad,
   SpeakerHigh,
 } from "@phosphor-icons/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { enviarEncuesta } from "../acciones";
@@ -36,9 +37,14 @@ type Paso =
   | { tipo: "item"; pregunta: Pregunta & { tipo: "escala" }; item: ItemEscala; grupo?: string; n: number; total: number; seccion: string }
   | { tipo: "confirmar" };
 
-type Props = { estamento: Estamento; curso: string | null };
+type Props = {
+  estamento: Estamento;
+  curso: string | null;
+  /** Vista previa del panel: misma encuesta, pero no envía nada y permite saltar preguntas. */
+  vistaPrevia?: boolean;
+};
 
-export function Formulario({ estamento, curso }: Props) {
+export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
   const encuesta = ENCUESTAS[estamento];
   const esEstudiante = estamento === "E";
   const router = useRouter();
@@ -46,6 +52,7 @@ export function Formulario({ estamento, curso }: Props) {
   const [indice, setIndice] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [enviando, iniciarEnvio] = useTransition();
+  const [finVistaPrevia, setFinVistaPrevia] = useState(false);
   const enviado = useRef(false);
   const titulo = useRef<HTMLHeadingElement>(null);
 
@@ -74,11 +81,11 @@ export function Formulario({ estamento, curso }: Props) {
   // Aviso del navegador antes de cerrar o recargar con respuestas sin enviar.
   useEffect(() => {
     const aviso = (e: BeforeUnloadEvent) => {
-      if (hayRespuestas && !enviado.current) e.preventDefault();
+      if (hayRespuestas && !enviado.current && !vistaPrevia) e.preventDefault();
     };
     window.addEventListener("beforeunload", aviso);
     return () => window.removeEventListener("beforeunload", aviso);
-  }, [hayRespuestas]);
+  }, [hayRespuestas, vistaPrevia]);
 
   // Al cambiar de pantalla: foco en el título (lectores de pantalla y teclado) y arriba.
   useEffect(() => {
@@ -124,12 +131,29 @@ export function Formulario({ estamento, curso }: Props) {
     setIndice((i) => Math.min(i + 1, pasos.length - 1));
   }
 
+  function saltar() {
+    setError(null);
+    setIndice((i) => Math.min(i + 1, pasos.length - 1));
+  }
+
+  function reiniciarVistaPrevia() {
+    setRespuestas({});
+    setError(null);
+    setFinVistaPrevia(false);
+    setIndice(0);
+  }
+
   function anterior() {
     setError(null);
     setIndice((i) => Math.max(i - 1, 0));
   }
 
   function enviar() {
+    // En la vista previa se llega al final aunque se hayan saltado preguntas.
+    if (vistaPrevia) {
+      setFinVistaPrevia(true);
+      return;
+    }
     // Revisión completa antes de enviar; si falta algo, se vuelve a esa pantalla.
     for (let i = 1; i < pasos.length - 1; i++) {
       const e = validarPaso(pasos[i]);
@@ -158,8 +182,41 @@ export function Formulario({ estamento, curso }: Props) {
   const avance = indice / (pasos.length - 1);
   const minutosRestantes = Math.max(1, Math.ceil(encuesta.minutos * (1 - avance)));
 
+  if (finVistaPrevia) {
+    return (
+      <div className={esEstudiante ? "estudiante" : ""}>
+        <div className="rounded-[24px] bg-tarjeta border border-borde p-6 sm:p-8 shadow-sm text-center">
+          <h1 ref={titulo} tabIndex={-1} className="titulo-encuesta text-3xl font-extrabold text-azul outline-none">
+            {encuesta.despedida}
+          </h1>
+          <p className="mt-3 text-lg">
+            Fin de la vista previa. Aquí la persona vería la pantalla de agradecimiento.
+          </p>
+          <p className="mt-1 text-base text-gris-texto">No se guardó ninguna respuesta.</p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={reiniciarVistaPrevia}
+              className="rounded-full bg-verde-profundo text-white px-6 py-3 min-h-12 font-bold"
+            >
+              Volver a empezar
+            </button>
+            <Link href="/gestion/encuestas" className="rounded-full border-2 border-borde bg-tarjeta px-6 py-3 min-h-12 font-bold">
+              Volver al panel
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={esEstudiante ? "estudiante" : ""}>
+      {vistaPrevia && (
+        <p role="note" className="mb-4 rounded-2xl border-2 border-dashed border-azul bg-azul/8 px-4 py-2 text-base font-semibold text-azul">
+          Vista previa: nada se guarda. Puede usar «Saltar» para avanzar sin responder.
+        </p>
+      )}
       {paso.tipo !== "intro" && (
         <div className="mb-4">
           <div className="flex justify-between text-sm font-semibold text-gris-texto">
@@ -252,7 +309,12 @@ export function Formulario({ estamento, curso }: Props) {
             Anterior
           </button>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          {vistaPrevia && paso.tipo !== "confirmar" && paso.tipo !== "intro" && (
+            <button type="button" onClick={saltar} className="font-bold text-azul underline px-2 min-h-12">
+              Saltar
+            </button>
+          )}
           {paso.tipo === "confirmar" ? (
             <button
               type="button"
@@ -261,7 +323,7 @@ export function Formulario({ estamento, curso }: Props) {
               className="inline-flex items-center gap-2 rounded-full bg-verde-profundo text-white px-7 py-3 min-h-14 text-lg font-bold disabled:opacity-60"
             >
               <PaperPlaneTilt size={24} weight="bold" aria-hidden />
-              {enviando ? "Enviando…" : "Enviar encuesta"}
+              {enviando ? "Enviando…" : vistaPrevia ? "Enviar (vista previa)" : "Enviar encuesta"}
             </button>
           ) : (
             <button
@@ -492,6 +554,12 @@ function PantallaPregunta({
   return (
     <div>
       <Encabezado seccion={seccion} pregunta={pregunta} extra={extra} titulo={titulo} lectura={lectura} />
+      {pregunta.tipo === "masImportante" && opciones.length === 0 && (
+        <p className="mt-4 rounded-2xl bg-amarillo/25 px-4 py-3 text-base">
+          Aquí aparecen solo las 3 prioridades marcadas en la pregunta anterior. Vuelva atrás y marque 3 para ver
+          las opciones.
+        </p>
+      )}
       <div className="mt-4 grid gap-2.5" role={multiple ? "group" : "radiogroup"} aria-label={pregunta.texto}>
         {opciones.map((o) => {
           const activo = elegidos.includes(o.codigo);

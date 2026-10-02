@@ -12,6 +12,7 @@ export default async function LayoutPanel({ children }: LayoutProps<"/gestion">)
   const estado = await leerEstado();
   const enlaces = [
     { href: "/gestion", texto: "Avance" },
+    { href: "/gestion/encuestas", texto: "Encuestas" },
     { href: "/gestion/credenciales", texto: "Credenciales" },
     ...(g.rol === "admin"
       ? [

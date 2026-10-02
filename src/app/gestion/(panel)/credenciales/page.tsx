@@ -6,8 +6,7 @@ import { leerEstado } from "@/lib/estado";
 import { exigirGestor } from "@/lib/gestion";
 import { crearLote } from "../../acciones";
 import { FormularioAviso } from "../../FormularioAviso";
-
-const campo = "rounded-xl border-2 border-borde bg-tarjeta px-3 py-2 text-base";
+import { CamposLote } from "./CamposLote";
 
 export default async function Credenciales() {
   const g = await exigirGestor();
@@ -44,39 +43,19 @@ export default async function Credenciales() {
         <section className="rounded-[24px] bg-tarjeta border border-borde p-5">
           <h2 className="text-xl font-extrabold">Generar un lote</h2>
           <p className="text-base text-gris-texto mb-3">
-            Sugerencia: matrícula + 10% de reserva. Las de prueba llevan el prefijo PRUEBA- y solo funcionan en
+            La cantidad sugerida es la matrícula + 10% de reserva. Las de prueba llevan el prefijo PRUEBA- y solo funcionan en
             modo Prueba; las oficiales solo funcionan en modo Oficial con el periodo abierto.
           </p>
-          <FormularioAviso accion={crearLote} boton="Generar credenciales" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 items-end">
-            <label className="grid gap-1 font-bold text-base">
-              Tipo
-              <select name="tipo" defaultValue={estado.modo === "prueba" ? "prueba" : "oficial"} className={campo}>
-                <option value="prueba">Prueba (PRUEBA-)</option>
-                <option value="oficial">Oficial</option>
-              </select>
-            </label>
-            <label className="grid gap-1 font-bold text-base">
-              Estamento
-              <select name="estamento" className={campo}>
-                <option value="A">Apoderados</option>
-                <option value="E">Estudiantes (5° a 8°)</option>
-                <option value="F">Funcionarios</option>
-              </select>
-            </label>
-            <label className="grid gap-1 font-bold text-base">
-              Curso (no aplica a funcionarios)
-              <select name="curso" className={campo}>
-                {cursos.map((c) => (
-                  <option key={c.codigo} value={c.codigo}>
-                    {c.nombre} · matrícula {c.matricula}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1 font-bold text-base">
-              Cantidad
-              <input name="cantidad" type="number" min={1} max={300} defaultValue={10} className={campo} required />
-            </label>
+          <FormularioAviso accion={crearLote} boton="Generar credenciales">
+            <CamposLote
+              cursos={cursos.map((c) => ({
+                codigo: c.codigo,
+                nombre: c.nombre,
+                matricula: c.matricula,
+                tieneEstudiantes: c.tieneEstudiantes,
+              }))}
+              tipoInicial={estado.modo === "prueba" ? "prueba" : "oficial"}
+            />
           </FormularioAviso>
         </section>
       )}
