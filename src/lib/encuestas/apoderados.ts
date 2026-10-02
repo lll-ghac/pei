@@ -1,0 +1,258 @@
+// Encuesta Grupo 1 · Padres y apoderados (v9 aprobada, 2/10/2026).
+import type { Encuesta } from "./tipos";
+import * as L from "./listas";
+import { op } from "./listas";
+
+export const VISION_ACTUAL =
+  "Escuela que logrará alumnos y alumnas con sólida formación valórica, capaces de integrarse positivamente en la sociedad";
+
+export const MISION_ACTUAL =
+  "Ser una escuela que constantemente fomente los saberes, formando alumnos y alumnas creativos, con decisión propia, utilizando las tecnologías y con sólida formación valórica";
+
+export const apoderados: Encuesta = {
+  estamento: "A",
+  titulo: "Encuesta para padres y apoderados",
+  introduccion: [
+    "Estimada familia: estamos actualizando el Proyecto Educativo Institucional (PEI) de la Escuela República del Ecuador y queremos conocer su opinión.",
+    "La encuesta es anónima, no hay respuestas correctas ni incorrectas y toma unos 15 minutos. Cada familia responde una sola encuesta: la credencial llega a través del hijo/a menor que estudia en la escuela. Si por error recibió más de una, responda solo una vez.",
+    "Las credenciales se repartieron al azar: nadie sabe cuál recibió su familia. En las respuestas escritas, por favor no escriba nombres de personas: si aparecen, se reemplazan antes de analizar.",
+  ],
+  minutos: 15,
+  despedida: "¡Muchas gracias por su tiempo!",
+  secciones: [
+    {
+      titulo: "Su familia",
+      preguntas: [
+        {
+          codigo: "A1",
+          numero: 1,
+          tipo: "unica",
+          texto: "¿Cuántos estudiantes representa como apoderado en la escuela?",
+          opciones: [op(1, "1"), op(2, "2"), op(3, "3 o más")],
+        },
+      ],
+    },
+    {
+      titulo: "Nuestra escuela hoy",
+      preguntas: [
+        {
+          codigo: "A2",
+          numero: 2,
+          tipo: "unica",
+          texto: "¿Conoce el lema o los sellos que identifican actualmente a la escuela?",
+          opciones: L.CON_ADULTOS,
+        },
+        {
+          codigo: "A3",
+          numero: 3,
+          tipo: "multiple",
+          max: 2,
+          texto: "¿Por qué eligió esta escuela?",
+          indicacion: "Marque máximo 2",
+          opciones: [
+            op(1, "Cercanía al hogar o trabajo"),
+            op(2, "Recomendación de otras familias"),
+            op(3, "Formación en valores"),
+            op(4, "Buenos resultados académicos"),
+            op(5, "Apoyo a estudiantes con dificultades de aprendizaje"),
+            op(6, "Buen ambiente y trato"),
+            op(7, "Historia y tradición de la escuela"),
+            op(8, "Fue la opción asignada por el sistema de admisión (SAE)"),
+            op(99, "Otra"),
+          ],
+        },
+        {
+          codigo: "A4",
+          numero: 4,
+          tipo: "multiple",
+          max: 2,
+          texto: "Según su experiencia, ¿en qué destaca HOY la escuela?",
+          indicacion: "Marque máximo 2",
+          opciones: [
+            op(1, "Formación en valores y respeto"),
+            op(2, "Calidad de los aprendizajes"),
+            op(3, "Compromiso y cercanía de profesores y asistentes"),
+            op(4, "Buena convivencia y seguridad"),
+            op(5, "Fomento de la lectura y la biblioteca"),
+            op(6, "Deporte y actividades extraprogramáticas"),
+            op(7, "Apoyo a estudiantes con dificultades"),
+            op(8, "Historia y tradición (114 años)"),
+            op(98, "No sé / no tengo suficiente información"),
+            op(99, "Otra"),
+          ],
+        },
+        {
+          codigo: "A5",
+          numero: 5,
+          tipo: "escala",
+          escala: "ACU",
+          texto: "¿Qué tan de acuerdo está con estas frases?",
+          indicacion: "Marque una opción por frase",
+          grupos: [
+            {
+              items: [
+                { codigo: "1", texto: "Me siento bienvenido/a cuando voy a la escuela" },
+                { codigo: "2", texto: "La escuela me informa a tiempo lo que necesito saber" },
+                { codigo: "3", texto: "Mis hijos/as se sienten seguros/as en la escuela" },
+                { codigo: "4", texto: "Mis hijos/as aprenden lo que necesitan" },
+                { codigo: "5", texto: "Los profesores se preocupan por mis hijos/as" },
+                { codigo: "6", texto: "Cuando hay conflictos, la escuela los resuelve bien" },
+                { codigo: "7", texto: "La escuela toma en cuenta la opinión de las familias" },
+                { codigo: "8", texto: "Sé a quién acudir si tengo un problema o consulta" },
+                { codigo: "9", texto: "La escuela promueve un trato igualitario entre hombres y mujeres" },
+              ],
+            },
+          ],
+        },
+        {
+          codigo: "A6",
+          numero: 6,
+          tipo: "multiple",
+          max: 2,
+          texto: "¿Qué aspecto debería mejorar primero la escuela?",
+          indicacion: "Marque máximo 2",
+          opciones: [
+            op(1, "Comunicación de la escuela con las familias"),
+            op(2, "Convivencia y seguridad de los estudiantes"),
+            op(3, "Infraestructura y espacios (baños, patios, salas)"),
+            op(4, "Apoyo a estudiantes con dificultades"),
+            op(5, "Resultados de aprendizaje"),
+            op(6, "Actividades extraprogramáticas (talleres, deporte, arte)"),
+            op(98, "No sé"),
+            op(99, "Otra"),
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Identidad de la escuela",
+      preguntas: [
+        {
+          codigo: "A7",
+          numero: 7,
+          tipo: "unica",
+          cita: { antes: "La visión actual de la escuela (PEI 2024–2026) dice:", texto: VISION_ACTUAL },
+          texto: "¿Representa lo que usted quiere para la escuela?",
+          opciones: L.VIG,
+        },
+        {
+          codigo: "A8",
+          numero: 8,
+          tipo: "exacta",
+          n: 2,
+          texto: "¿Cuál debería ser el propósito principal de nuestra escuela?",
+          indicacion: "Marque exactamente 2",
+          opciones: L.PROP_ADULTOS,
+        },
+      ],
+    },
+    {
+      titulo: "La escuela que queremos",
+      preguntas: [
+        {
+          codigo: "A9",
+          numero: 9,
+          tipo: "exacta",
+          n: 3,
+          texto: "¿Cuáles de estas prioridades debería tener el nuevo Proyecto Educativo (PEI)?",
+          indicacion: "Marque exactamente 3",
+          opciones: L.PRIORIDADES_ADULTOS,
+        },
+        {
+          codigo: "A10",
+          numero: 10,
+          tipo: "masImportante",
+          de: "A9",
+          texto: "De las tres que marcó, ¿cuál es la MÁS importante?",
+          indicacion: "Marque una",
+        },
+        {
+          codigo: "A11",
+          numero: 11,
+          tipo: "unica",
+          texto: "¿Por qué es la más importante para usted?",
+          indicacion: "Marque una",
+          opciones: L.POR_ADULTOS,
+        },
+        {
+          codigo: "A12",
+          numero: 12,
+          tipo: "multiple",
+          max: 2,
+          texto: "¿Qué se necesita para lograrla?",
+          indicacion: "Marque máximo 2",
+          opciones: L.NEC,
+        },
+        {
+          codigo: "A13",
+          numero: 13,
+          tipo: "multiple",
+          max: 2,
+          texto: "¿Cómo podría aportar usted?",
+          indicacion: "Marque máximo 2",
+          opciones: L.APO_A,
+        },
+        {
+          codigo: "A14",
+          numero: 14,
+          tipo: "multiple",
+          max: 2,
+          texto: "¿Con qué instituciones u organizaciones debería colaborar más la escuela?",
+          indicacion: "Marque máximo 2",
+          opciones: L.RED_ADULTOS,
+        },
+        {
+          codigo: "A15",
+          numero: 15,
+          tipo: "exacta",
+          n: 3,
+          texto: "¿Qué valores deberían guiar a nuestra escuela?",
+          indicacion: "Marque exactamente 3",
+          opciones: L.VAL_ADULTOS,
+        },
+        {
+          codigo: "A16",
+          numero: 16,
+          tipo: "exacta",
+          n: 3,
+          texto: "Al terminar 8° básico, un estudiante de nuestra escuela debería ser…",
+          indicacion: "Marque exactamente 3",
+          opciones: L.PER_ADULTOS,
+        },
+        {
+          codigo: "A17",
+          numero: 17,
+          tipo: "exacta",
+          n: 3,
+          texto: "Un buen profesor o profesora de nuestra escuela es alguien que…",
+          indicacion: "Marque exactamente 3",
+          opciones: L.DOC_ADULTOS,
+        },
+        {
+          codigo: "A18",
+          numero: 18,
+          tipo: "exacta",
+          n: 3,
+          texto: "En nuestra escuela, una familia comprometida es aquella que…",
+          indicacion: "Marque exactamente 3",
+          opciones: L.FAM,
+        },
+        {
+          codigo: "A19",
+          numero: 19,
+          tipo: "abierta",
+          texto:
+            "Imagine que en el 2030 una familia nueva pregunta por nuestra escuela. ¿Cómo le gustaría que la describieran?",
+          indicacion: "Opcional",
+        },
+        {
+          codigo: "A20",
+          numero: 20,
+          tipo: "abierta",
+          texto: "Si pudiera cambiar UNA sola cosa de la escuela, ¿cuál sería?",
+          indicacion: "Opcional",
+        },
+      ],
+    },
+  ],
+};
