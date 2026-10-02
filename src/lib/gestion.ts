@@ -124,8 +124,13 @@ export async function reiniciarACero(autor: string) {
     }
     await tx
       .update(schema.credenciales)
-      .set({ estado: "sin_usar", usadaEl: null, intentosFallidos: 0, bloqueadaHasta: null })
+      .set({ estado: "sin_usar", usadaEl: null })
       .where(and(eq(schema.credenciales.prueba, false), eq(schema.credenciales.estado, "usada")));
+    // También se limpian los bloqueos por intentos fallidos ocurridos durante las pruebas.
+    await tx
+      .update(schema.credenciales)
+      .set({ intentosFallidos: 0, bloqueadaHasta: null })
+      .where(eq(schema.credenciales.prueba, false));
     await tx.insert(schema.bitacora).values({
       actor: autor,
       accion: "Reinicio a cero",
