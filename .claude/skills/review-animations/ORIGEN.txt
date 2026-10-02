@@ -1,0 +1,3 @@
+Origen: https://github.com/emilkowalski/skills
+Commit: e8a175de22
+Copiado: 2026-10-02 (revisado antes de instalar)
