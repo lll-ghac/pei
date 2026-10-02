@@ -12,13 +12,9 @@ PAQUETE="despliegue/encuesta-pei-$REV.tar.gz"
 
 echo "== Compilando $REV en Docker (Node 24, Debian 13)"
 docker build -f despliegue/Dockerfile -t encuesta-pei-build .
-ID=$(docker create encuesta-pei-build)
-rm -rf despliegue/out && mkdir -p despliegue/out
-docker cp "$ID:/out/." despliegue/out/
-docker rm "$ID" >/dev/null
-echo "$REV" > despliegue/out/VERSION
-tar -C despliegue/out -czf "$PAQUETE" .
-rm -rf despliegue/out
+# El paquete se arma dentro del contenedor: así se conservan los enlaces simbólicos
+# que Windows no puede crear (Turbopack enlaza los paquetes externos).
+docker run --rm encuesta-pei-build sh -c "echo '$REV' > /out/VERSION && tar -czf - -C /out ." > "$PAQUETE"
 
 echo "== Copiando al servidor"
 "${SSH[@]}" "cat > /tmp/encuesta-pei.tar.gz" < "$PAQUETE"
