@@ -228,3 +228,10 @@ a {
     opacity: 0;
   }
 }
+
+/* Pantallas muy bajas (iPhone SE con las barras de Safari): en las frases de escala, las opciones primero. */
+@media (max-height: 600px) {
+  body:has([data-compacto]) .franja-prueba {
+    display: none;
+  }
+}

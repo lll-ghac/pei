@@ -19,10 +19,10 @@ export function Cabecera({ logo = "escudo", detalle, derecha, ancho = "angosto" 
     <header>
       <div className="bg-timbre text-white">
         <div
-          className={`mx-auto flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 min-h-14 ${ANCHOS[ancho]}`}
+          className={`mx-auto flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1 sm:py-2 min-h-12 sm:min-h-14 ${ANCHOS[ancho]}`}
         >
           <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0 no-underline">
-            <span className="grid place-items-center size-9 sm:size-10 shrink-0 rounded-[2px] bg-white">
+            <span className="grid place-items-center size-8 sm:size-10 shrink-0 rounded-[2px] bg-white">
               {logo === "insignia" ? (
                 <Image src="/insignia.png" alt="Insignia de la Escuela República del Ecuador" width={36} height={32} priority />
               ) : (
