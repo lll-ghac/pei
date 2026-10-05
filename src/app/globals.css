@@ -39,6 +39,14 @@
   --ease-movimiento: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
+/* Series de los gráficos de resultados: un color fijo por estamento (validado con la skill de
+   visualización: CVD ΔE 9.2, visión normal ΔE 24; el verde agua bajo 3:1 lleva siempre su valor escrito). */
+:root {
+  --serie-A: #2a78d6; /* apoderados */
+  --serie-E: #eb6834; /* estudiantes */
+  --serie-F: #1baf7a; /* funcionarios */
+}
+
 html {
   color-scheme: light;
   -webkit-text-size-adjust: 100%;

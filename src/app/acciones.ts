@@ -58,6 +58,7 @@ export async function ingresar(_previo: EstadoIngreso, form: FormData): Promise<
 
   const estado = await leerEstado();
   if (!puedeResponder(estado, cred.prueba)) {
+    if (estado.cerrada) return { error: "La encuesta ya está cerrada. Gracias por su interés.", usuario };
     if (estado.modo === "prueba") {
       return { error: "La encuesta aún no comienza. Guarde su papeleta para cuando se abra.", usuario };
     }

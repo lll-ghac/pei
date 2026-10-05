@@ -1,0 +1,253 @@
+import Link from "next/link";
+import { ENCUESTAS, preguntasDe, type Estamento } from "@/lib/encuestas";
+import { leerEstado } from "@/lib/estado";
+import { exigirGestor } from "@/lib/gestion";
+import {
+  COMPARABLES,
+  MINIMO,
+  cargarUrna,
+  comparar,
+  filtrarFuncionarios,
+  prioridades,
+  resumir,
+  type GrupoFuncionarios,
+} from "@/lib/resultados";
+import {
+  BarrasOpciones,
+  CalorEscala,
+  DistribucionItem,
+  Leyenda,
+  Muestra,
+  NOMBRE,
+  TablaComparativa,
+  TablaPrioridades,
+} from "./Graficos";
+
+export const metadata = { title: "Resultados · Encuesta PEI 2027" };
+
+const VISTAS = [
+  { id: "resumen", texto: "Resumen" },
+  { id: "prioridades", texto: "Prioridades y sellos" },
+  { id: "escalas", texto: "Escalas" },
+  { id: "A", texto: "Apoderados" },
+  { id: "E", texto: "Estudiantes" },
+  { id: "F", texto: "Funcionarios" },
+] as const;
+type Vista = (typeof VISTAS)[number]["id"];
+
+const ESCALAS_POR: Record<Estamento, string> = { A: "A5", E: "E2", F: "F7" };
+/** Sección de gestión de funcionarios: solo en total o separada entre docentes y asistentes (MVP). */
+const GESTION = ["F7", "F8"];
+
+export default async function Resultados(props: PageProps<"/gestion/resultados">) {
+  await exigirGestor();
+  const estado = await leerEstado();
+  const q = await props.searchParams;
+  const vista = (VISTAS.find((v) => v.id === q.ver)?.id ?? "resumen") as Vista;
+  const grupo = (["docentes", "asistentes"].includes(String(q.grupo)) ? q.grupo : "todos") as GrupoFuncionarios;
+
+  if (!estado.cerrada) {
+    return (
+      <div className="space-y-4 max-w-[70ch]">
+        <h1 className="titulo text-[30px]">Resultados</h1>
+        <p>
+          Los resultados se abren cuando la administración <strong>cierra la encuesta</strong>. Mientras está abierta,
+          el panel muestra solo la participación, para que nadie pueda deducir qué respondió alguien comparando el
+          antes y el después de un envío.
+        </p>
+        <p className="text-grafito">
+          {estado.modo === "prueba"
+            ? "En modo Prueba se puede cerrar para ensayar con los datos de prueba y volver a abrir después (Panel → Sistema)."
+            : "En modo Oficial el cierre es definitivo."}
+        </p>
+      </div>
+    );
+  }
+
+  const prueba = estado.modo === "prueba";
+  const urna = await cargarUrna(prueba);
+  const n = { A: urna.A.length, E: urna.E.length, F: urna.F.length };
+  const href = (ver: string, extra = "") => `/gestion/resultados?ver=${ver}${extra}`;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+        <h1 className="titulo text-[30px]">Resultados</h1>
+        {prueba && <span className="sello text-lacre text-[13px]">Datos de prueba</span>}
+        <p className="text-[16px] text-grafito">
+          {(["A", "E", "F"] as Estamento[]).map((e, i) => (
+            <span key={e}>
+              {i > 0 && " · "}
+              {NOMBRE[e]}: <strong className="text-tinta">{n[e]}</strong>
+            </span>
+          ))}
+        </p>
+      </div>
+
+      <nav aria-label="Vistas de resultados" className="border-b border-filete">
+        <ul className="flex flex-wrap -mb-px">
+          {VISTAS.map((v) => (
+            <li key={v.id}>
+              <Link
+                href={href(v.id)}
+                aria-current={vista === v.id ? "page" : undefined}
+                className={`rotulo inline-block px-3 py-2.5 text-[15px] no-underline border-b-2 ${
+                  vista === v.id ? "border-tinta text-tinta" : "border-transparent text-grafito hover:text-timbre"
+                }`}
+              >
+                {v.texto}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <p className="text-[15px] text-gris-texto max-w-[80ch]">
+        Cada cifra indica su pregunta, estamento y número de respuestas (n). No se muestran grupos con menos de{" "}
+        {MINIMO} respuestas. Esto es el dato; la interpretación es de la comisión.
+      </p>
+
+      {vista === "resumen" && (
+        <div className="space-y-8">
+          {COMPARABLES.map((c) => {
+            const { n: nc, filas } = comparar(c, urna);
+            const est = (Object.keys(c.codigos) as Estamento[]).filter((e) => (nc[e] ?? 0) >= MINIMO);
+            return (
+              <section key={c.titulo} className="bg-papel border border-filete p-5" aria-labelledby={`c-${c.titulo}`}>
+                <h2 id={`c-${c.titulo}`} className="text-[20px] font-bold">
+                  {c.titulo}
+                </h2>
+                <p className="text-[15px] text-grafito mb-3">
+                  {(Object.entries(c.codigos) as [Estamento, string][]).map(([e, cod]) => `${cod} (n=${nc[e] ?? 0})`).join(" · ")}
+                  {c.nota ? ` · ${c.nota}` : ""}
+                </p>
+                {est.length ? <TablaComparativa filas={filas} estamentos={est} /> : <p className="text-gris-texto">Ningún estamento llega a {MINIMO} respuestas.</p>}
+              </section>
+            );
+          })}
+        </div>
+      )}
+
+      {vista === "prioridades" &&
+        (() => {
+          const p = prioridades(urna);
+          return (
+            <section className="bg-papel border border-filete p-5 space-y-3">
+              <h2 className="text-[20px] font-bold">Prioridades del nuevo PEI y sellos candidatos</h2>
+              <p className="text-[16px] text-grafito max-w-[85ch]">
+                A9 · E6 · F9 (top 3) y A10 · E7 · F10 (la más importante). <strong className="text-tinta">Sello candidato</strong>:
+                prioridad entre las 5 primeras en al menos 2 de los 3 estamentos. Si la mayoría la eligió como la más
+                importante por ser una debilidad, se lee como objetivo de mejora; si por fortaleza o porque distinguiría
+                a la escuela, como sello. La plataforma propone; la decisión es de la comisión.
+              </p>
+              <Leyenda estamentos={p.validos} />
+              {p.validos.length >= 2 ? (
+                <TablaPrioridades filas={p.filas} validos={p.validos} />
+              ) : (
+                <p className="text-gris-texto">Se necesitan al menos 2 estamentos con {MINIMO} respuestas o más.</p>
+              )}
+            </section>
+          );
+        })()}
+
+      {vista === "escalas" && (
+        <div className="space-y-8">
+          {(["A", "E", "F"] as Estamento[]).map((e) => {
+            const p = preguntasDe(ENCUESTAS[e]).find((x) => x.codigo === ESCALAS_POR[e])!;
+            const columnas =
+              e === "F"
+                ? (["todos", "docentes", "asistentes"] as GrupoFuncionarios[]).map((g) => {
+                    const lista = filtrarFuncionarios(urna.F, g);
+                    const r = resumir(p, lista, ENCUESTAS.F);
+                    return { nombre: g === "todos" ? "Total" : g === "docentes" ? "Docentes" : "Asistentes", items: lista.length >= MINIMO && r.tipo === "escala" ? r.items : null };
+                  })
+                : [{ nombre: "Total", items: (() => { const r = resumir(p, urna[e], ENCUESTAS[e]); return urna[e].length >= MINIMO && r.tipo === "escala" ? r.items : null; })() }];
+            return (
+              <section key={e} className="bg-papel border border-filete p-5">
+                <h2 className="text-[20px] font-bold inline-flex items-center gap-2">
+                  <Muestra e={e} /> {NOMBRE[e]} · {p.codigo}
+                </h2>
+                <p className="text-[15px] text-grafito mb-3">
+                  {p.texto} · % {e === "E" ? "casi siempre o siempre" : "de acuerdo o muy de acuerdo"}, sin contar «No sé» ·
+                  n={n[e]}
+                  {e === "F" && " · se separa solo entre docentes y asistentes"}
+                </p>
+                <CalorEscala columnas={columnas} />
+              </section>
+            );
+          })}
+        </div>
+      )}
+
+      {(vista === "A" || vista === "E" || vista === "F") &&
+        (() => {
+          const e = vista as Estamento;
+          const lista = e === "F" ? filtrarFuncionarios(urna.F, grupo) : urna[e];
+          if (lista.length < MINIMO) {
+            return <p className="text-gris-texto">Este grupo tiene menos de {MINIMO} respuestas: no se muestra.</p>;
+          }
+          return (
+            <div className="space-y-5">
+              {e === "F" && (
+                <nav aria-label="Grupo de funcionarios" className="flex flex-wrap gap-2">
+                  {(["todos", "docentes", "asistentes"] as GrupoFuncionarios[]).map((g) => (
+                    <Link
+                      key={g}
+                      href={href("F", g === "todos" ? "" : `&grupo=${g}`)}
+                      aria-current={grupo === g ? "true" : undefined}
+                      className={`boton !min-h-11 !py-1.5 text-[16px] no-underline ${grupo === g ? "bg-tinta text-papel" : "boton-secundario"}`}
+                    >
+                      {g === "todos" ? "Todos" : g === "docentes" ? "Docentes" : "Asistentes"}
+                    </Link>
+                  ))}
+                  <span className="self-center text-[15px] text-grafito">n={lista.length}</span>
+                </nav>
+              )}
+              {preguntasDe(ENCUESTAS[e]).map((p) => {
+                if (e === "F" && p.codigo === "F1") return null;
+                const r = resumir(p, lista, ENCUESTAS[e]);
+                return (
+                  <section key={p.codigo} className="bg-papel border border-filete p-5" aria-labelledby={`p-${p.codigo}`}>
+                    <h2 id={`p-${p.codigo}`} className="text-[19px] font-bold">
+                      <span className="rotulo text-timbre mr-2">{p.numero}</span>
+                      {p.texto}
+                    </h2>
+                    <p className="text-[15px] text-grafito mb-3">
+                      {p.codigo} · {NOMBRE[e]}
+                      {e === "F" && grupo !== "todos" ? ` (${grupo})` : ""} · n={r.n}
+                      {GESTION.includes(p.codigo) && " · gestión: solo total o docentes/asistentes"}
+                    </p>
+                    {r.tipo === "opciones" && (
+                      <>
+                        <BarrasOpciones opciones={r.opciones} e={e} ordenar={p.tipo !== "unica"} />
+                        {r.textosOtra > 0 && (
+                          <p className="mt-2 text-[15px] text-grafito">
+                            {r.textosOtra} texto(s) en «Otra»: se leen en Abiertas, después de la revisión de nombres.
+                          </p>
+                        )}
+                      </>
+                    )}
+                    {r.tipo === "escala" && (
+                      <ul className="divide-y divide-filete">
+                        {r.items.map((it) => (
+                          <li key={it.codigo} className="py-2">
+                            <p>{it.texto}</p>
+                            <DistribucionItem it={it} escala={r.pregunta.escala} />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {r.tipo === "abierta" && (
+                      <p className="text-grafito">
+                        {r.escritas} respuesta(s) escrita(s). Se leen en Abiertas, después de la revisión de nombres.
+                      </p>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
+          );
+        })()}
+    </div>
+  );
+}

@@ -6,8 +6,10 @@ import {
   cambiarClavePropia,
   cambiarCuenta,
   cambiarPeriodo,
+  cerrarEncuesta,
   crearCuenta,
   pasarAOficial,
+  reabrirPrueba,
   reiniciar,
 } from "../../acciones";
 import { FormularioAviso } from "../../FormularioAviso";
@@ -78,6 +80,40 @@ export default async function Sistema() {
               {estado.abierta ? "Cerrar el periodo oficial" : "Abrir el periodo oficial"}
             </button>
           </form>
+        )}
+      </section>
+
+      <section className={tarjeta}>
+        <h2 className="rotulo text-[17px]">Cierre y resultados</h2>
+        {estado.cerrada ? (
+          <>
+            <p>
+              La encuesta está <strong>cerrada</strong>: no se reciben respuestas y los resultados están abiertos en
+              Panel → Resultados.
+            </p>
+            {estado.modo === "prueba" && (
+              <form action={reabrirPrueba}>
+                <button type="submit" className="boton boton-secundario">
+                  Reabrir para seguir probando
+                </button>
+              </form>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="text-[17px]">
+              Al cerrar, nadie más puede responder y se abren los resultados para la administración y la comisión.
+              {estado.modo === "prueba"
+                ? " En modo Prueba sirve para ensayar el cierre con los datos de prueba; después se puede reabrir."
+                : " En modo Oficial el cierre es definitivo."}
+            </p>
+            <FormularioAviso accion={cerrarEncuesta} boton="Cerrar la encuesta" peligro className="grid gap-3 sm:grid-cols-[1fr_auto] items-end max-w-xl">
+              <label className="grid gap-1 min-w-0 text-base font-bold">
+                Escriba CERRAR para confirmar
+                <input name="confirmacion" autoComplete="off" className={campo} />
+              </label>
+            </FormularioAviso>
+          </>
         )}
       </section>
 

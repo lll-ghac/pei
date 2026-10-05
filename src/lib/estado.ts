@@ -8,10 +8,15 @@ export type Estado = {
   modo: Modo;
   /** Periodo oficial abierto (en modo Prueba siempre se puede responder). */
   abierta: boolean;
+  /**
+   * Encuesta cerrada: no se puede responder y se abren los resultados para la comisión.
+   * En Prueba se puede reabrir para seguir ensayando; en Oficial el cierre es definitivo.
+   */
+  cerrada: boolean;
   funcionariosTotal: number;
 };
 
-const POR_DEFECTO: Estado = { modo: "prueba", abierta: false, funcionariosTotal: 120 };
+const POR_DEFECTO: Estado = { modo: "prueba", abierta: false, cerrada: false, funcionariosTotal: 120 };
 
 export async function leerEstado(): Promise<Estado> {
   const filas = await db.select().from(schema.ajustes);
@@ -30,6 +35,7 @@ export async function guardarEstado(cambios: Partial<Estado>) {
 
 /** ¿Se puede responder ahora con una credencial de prueba u oficial? */
 export function puedeResponder(estado: Estado, credencialDePrueba: boolean) {
+  if (estado.cerrada) return false;
   if (estado.modo === "prueba") return credencialDePrueba;
   return !credencialDePrueba && estado.abierta;
 }

@@ -141,7 +141,7 @@ export async function pasarAOficial(_p: Aviso, form: FormData): Promise<Aviso> {
   if (respuestas > 0 || deprueba > 0) {
     return { error: "Antes de pasar a Oficial haga el reinicio a cero: aún hay respuestas o credenciales de prueba." };
   }
-  await guardarEstado({ modo: "oficial", abierta: false });
+  await guardarEstado({ modo: "oficial", abierta: false, cerrada: false });
   await registrar(g.usuario, "Paso a modo Oficial", "Reinicio bloqueado desde ahora");
   revalidatePath("/", "layout");
   return { ok: "La plataforma está en modo Oficial. Abra el periodo cuando la comisión lo indique." };
@@ -150,7 +150,7 @@ export async function pasarAOficial(_p: Aviso, form: FormData): Promise<Aviso> {
 export async function cambiarPeriodo(form: FormData) {
   const g = await exigirGestor("admin");
   const estado = await leerEstado();
-  if (estado.modo !== "oficial") return;
+  if (estado.modo !== "oficial" || estado.cerrada) return;
   const abrir = form.get("accion") === "abrir";
   await guardarEstado({ abierta: abrir });
   await registrar(g.usuario, abrir ? "Apertura del periodo oficial" : "Cierre del periodo oficial");
@@ -221,4 +221,34 @@ export async function cambiarObservacion(form: FormData) {
       .where(eq(schema.observaciones.id, id));
   }
   revalidatePath("/gestion/encuestas", "layout");
+}
+
+// ----- Cierre y resultados -----
+
+/** Cierra la encuesta: nadie más puede responder y se abren los resultados para la comisión. */
+export async function cerrarEncuesta(_p: Aviso, form: FormData): Promise<Aviso> {
+  const g = await exigirGestor("admin");
+  if (String(form.get("confirmacion")).trim() !== "CERRAR") {
+    return { error: "Escriba CERRAR, en mayúsculas, para confirmar." };
+  }
+  const estado = await leerEstado();
+  if (estado.cerrada) return { error: "La encuesta ya está cerrada." };
+  await guardarEstado({ cerrada: true, abierta: false });
+  await registrar(
+    g.usuario,
+    estado.modo === "prueba" ? "Cierre de ensayo (modo Prueba)" : "Cierre de la encuesta oficial",
+    "Respuestas detenidas; resultados abiertos para la comisión",
+  );
+  revalidatePath("/", "layout");
+  return { ok: "Encuesta cerrada. Los resultados ya están en Panel → Resultados." };
+}
+
+/** Solo en modo Prueba: vuelve a permitir respuestas para seguir ensayando. */
+export async function reabrirPrueba() {
+  const g = await exigirGestor("admin");
+  const estado = await leerEstado();
+  if (estado.modo !== "prueba" || !estado.cerrada) return;
+  await guardarEstado({ cerrada: false });
+  await registrar(g.usuario, "Reapertura del ensayo (modo Prueba)");
+  revalidatePath("/", "layout");
 }
