@@ -124,7 +124,7 @@ export async function reiniciarACero(autor: string) {
     }
     await tx
       .update(schema.credenciales)
-      .set({ estado: "sin_usar", usadaEl: null })
+      .set({ estado: "sin_usar", usadaEl: null, envioId: null })
       .where(and(eq(schema.credenciales.prueba, false), eq(schema.credenciales.estado, "usada")));
     // También se limpian los bloqueos por intentos fallidos ocurridos durante las pruebas.
     await tx

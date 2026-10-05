@@ -56,6 +56,11 @@ export const credenciales = pgTable("credenciales", {
   estado: text("estado").notNull().default("sin_usar"), // sin_usar | usada | desactivada
   /** Solo el día de uso (participación por día); nunca la hora. */
   usadaEl: date("usada_el"),
+  /**
+   * Número aleatorio que el navegador genera al depositar. Permite reconocer un reintento del mismo
+   * envío (si la respuesta se perdió en el camino). Solo vive en el padrón; la urna no lo tiene.
+   */
+  envioId: text("envio_id"),
   intentosFallidos: integer("intentos_fallidos").notNull().default(0),
   bloqueadaHasta: timestamp("bloqueada_hasta", { withTimezone: true }),
 });

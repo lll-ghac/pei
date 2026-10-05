@@ -52,6 +52,8 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
   /** Se llegó a una pregunta con «Cambiar» desde el resumen: el botón principal vuelve al resumen. */
   const [desdeResumen, setDesdeResumen] = useState(false);
   const enviado = useRef(false);
+  /** Número de este envío: el mismo en cada reintento, para que el servidor reconozca un envío repetido. */
+  const envioId = useRef<string | null>(null);
   const titulo = useRef<HTMLHeadingElement>(null);
   const avisoError = useRef<HTMLDivElement>(null);
 
@@ -100,6 +102,7 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
 
   function actualizar(codigo: string, valor: ValorRespuesta) {
     setError(null);
+    envioId.current = null;
     setRespuestas((prev) => {
       const nuevo = { ...prev, [codigo]: valor };
       // Si cambian las 3 prioridades, "la más importante" debe seguir estando entre ellas.
@@ -189,11 +192,15 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
       }
       iniciarEnvio(async () => {
         try {
-          const r = await enviarEncuesta(respuestas);
+          envioId.current ??=
+            typeof crypto.randomUUID === "function"
+              ? crypto.randomUUID()
+              : Array.from(crypto.getRandomValues(new Uint8Array(16)), (x) => x.toString(16).padStart(2, "0")).join("");
+          const r = await enviarEncuesta(respuestas, envioId.current);
           if (r.ok) {
             enviado.current = true;
             setRespuestas({});
-            router.replace(`/gracias?e=${estamento}`);
+            router.replace(`/gracias?e=${estamento}${r.yaRecibida ? "&ya=1" : ""}`);
           } else {
             setDoblando(false);
             setError(r.error);
@@ -847,18 +854,16 @@ function PantallaItem({
     <div>
       {/* Pregunta en una línea menor; la frase es el título, para que las opciones quepan sin bajar. */}
       {/* En pantallas muy bajas (iPhone SE con las barras de Safari) la pregunta queda solo para lectores de pantalla. */}
-      <div className="px-5 sm:px-8 pt-3 pb-2.5 grid grid-cols-[1fr_auto] items-start gap-x-3 [@media(max-height:600px)]:pt-2">
-        <p className="text-[18px] font-bold text-grafito leading-snug [@media(max-height:600px)]:sr-only">
-          <span className="rotulo text-timbre mr-2">{paso.pregunta.numero}</span>
-          {paso.pregunta.texto}
-          {paso.grupo && <span className="hidden sm:inline font-normal"> · {paso.grupo}</span>}
-        </p>
-        <LeerEnVozAlta texto={lectura} />
-      </div>
-      <div className="mx-5 sm:mx-8 mb-2.5 border border-grafito px-4 py-2">
-        <h1 ref={titulo} tabIndex={-1} className="text-[21px] font-bold leading-snug outline-none">
+      <p className="px-5 sm:px-8 pt-3 pb-2.5 text-[18px] font-bold text-grafito leading-snug [@media(max-height:600px)]:sr-only">
+        <span className="rotulo text-timbre mr-2">{paso.pregunta.numero}</span>
+        {paso.pregunta.texto}
+        {paso.grupo && <span className="hidden sm:inline font-normal"> · {paso.grupo}</span>}
+      </p>
+      <div className="mx-5 sm:mx-8 mb-2.5 border border-grafito pl-4 pr-2 py-2 flex items-start gap-2 [@media(max-height:600px)]:mt-2">
+        <h1 ref={titulo} tabIndex={-1} className="flex-1 text-[21px] font-bold leading-snug outline-none">
           «{paso.item.texto}»<span className="sr-only">. Frase {paso.n} de {paso.total}.</span>
         </h1>
+        <LeerEnVozAlta texto={lectura} />
       </div>
       <div className="border-t border-filete divide-y divide-filete" role="radiogroup" aria-label={paso.item.texto}>
         {escala.map((o, i) => {

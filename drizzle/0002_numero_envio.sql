@@ -1,0 +1,1 @@
+ALTER TABLE "credenciales" ADD COLUMN "envio_id" text;

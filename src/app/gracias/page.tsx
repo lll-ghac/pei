@@ -4,7 +4,7 @@ import { Urna } from "@/components/Urna";
 import { ENCUESTAS, type Estamento } from "@/lib/encuestas";
 
 export default async function Gracias(props: PageProps<"/gracias">) {
-  const { e } = await props.searchParams;
+  const { e, ya } = await props.searchParams;
   const estamento: Estamento = e === "E" || e === "F" ? e : "A";
   const tu = estamento === "E";
 
@@ -15,6 +15,13 @@ export default async function Gracias(props: PageProps<"/gracias">) {
         <section className="bg-papel border-y sm:border border-filete px-5 sm:px-10 py-9 text-center">
           <Urna className="mx-auto w-44" papeletas={4} />
           <h1 className="titulo mt-6 text-[30px] sm:text-[36px]">{ENCUESTAS[estamento].despedida}</h1>
+          {ya === "1" && (
+            <p className="mt-3 text-[18px] text-grafito">
+              {tu
+                ? "Tu papeleta ya había llegado en el primer intento; se contó una sola vez."
+                : "Su papeleta ya había llegado en el primer intento; se contó una sola vez."}
+            </p>
+          )}
           <p className="mt-3 text-[20px]">
             {tu ? "Tu papeleta ya está en la urna. Tus respuestas quedaron guardadas en secreto." : "Su papeleta ya está en la urna. Sus respuestas quedaron guardadas de forma anónima."}
           </p>

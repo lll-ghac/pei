@@ -75,15 +75,27 @@ export async function ingresar(_previo: EstadoIngreso, form: FormData): Promise<
   redirect("/encuesta");
 }
 
-export type ResultadoEnvio = { ok: true } | { ok: false; error: string };
+export type ResultadoEnvio = { ok: true; yaRecibida?: boolean } | { ok: false; error: string };
 
 /**
  * Guarda la encuesta en la urna y marca la credencial como usada, en una sola transacción.
  * La urna no recibe la credencial, ni la fecha, ni la hora.
  */
-export async function enviarEncuesta(respuestas: unknown): Promise<ResultadoEnvio> {
+export async function enviarEncuesta(respuestas: unknown, envioId: string): Promise<ResultadoEnvio> {
+  const envio = typeof envioId === "string" && /^[A-Za-z0-9-]{16,64}$/.test(envioId) ? envioId : null;
   const id = await leerParticipante();
-  if (!id) return { ok: false, error: "La sesión terminó. Vuelva a ingresar con su papeleta." };
+  if (!id) {
+    // La respuesta del primer intento pudo perderse después de cerrar la sesión: si este mismo envío
+    // ya llegó, se reconoce por su número (aleatorio, solo lo conoce este navegador).
+    if (envio) {
+      const [previa] = await db
+        .select({ id: schema.credenciales.id })
+        .from(schema.credenciales)
+        .where(and(eq(schema.credenciales.envioId, envio), eq(schema.credenciales.estado, "usada")));
+      if (previa) return { ok: true, yaRecibida: true };
+    }
+    return { ok: false, error: "La sesión terminó. Vuelva a ingresar con su papeleta." };
+  }
 
   const estado = await leerEstado();
   const resultado = await db.transaction(async (tx) => {
@@ -92,6 +104,10 @@ export async function enviarEncuesta(respuestas: unknown): Promise<ResultadoEnvi
       .from(schema.credenciales)
       .where(eq(schema.credenciales.id, id))
       .for("update");
+    // Reintento del mismo envío: la papeleta ya había llegado y no se cuenta dos veces.
+    if (cred && cred.estado === "usada" && envio && cred.envioId === envio) {
+      return { ok: true as const, yaRecibida: true };
+    }
     if (!cred || cred.estado !== "sin_usar") {
       return { ok: false as const, error: "Esta credencial ya fue usada." };
     }
@@ -113,6 +129,7 @@ export async function enviarEncuesta(respuestas: unknown): Promise<ResultadoEnvi
       .set({
         estado: "usada",
         usadaEl: sql`(now() at time zone 'America/Santiago')::date`,
+        envioId: envio,
       })
       .where(and(eq(schema.credenciales.id, cred.id), eq(schema.credenciales.estado, "sin_usar")));
     return { ok: true as const };
