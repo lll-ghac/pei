@@ -6,6 +6,7 @@ import { funcionarios } from "./funcionarios";
 import { ESCALAS } from "./listas";
 import {
   EXCLUYENTES,
+  MAX_ABIERTA,
   MAX_TEXTO,
   OTRA,
   type Encuesta,
@@ -36,12 +37,12 @@ export function preguntasDe(encuesta: Encuesta): Pregunta[] {
 }
 
 /** Limpia un texto libre: sin caracteres de control, espacios recortados y largo máximo. */
-export function limpiarTexto(texto: string | undefined): string {
+export function limpiarTexto(texto: string | undefined, maximo = MAX_TEXTO): string {
   if (!texto) return "";
   return texto
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
     .trim()
-    .slice(0, MAX_TEXTO);
+    .slice(0, maximo);
 }
 
 /** Opciones válidas de una pregunta, considerando "la más importante". */
@@ -74,7 +75,7 @@ export function validarPregunta(
 
   if (p.tipo === "abierta") {
     const t = valor?.texto ?? "";
-    if (t.length > MAX_TEXTO) return `El texto puede tener hasta ${MAX_TEXTO} caracteres.`;
+    if (t.length > MAX_ABIERTA) return `El texto puede tener hasta ${MAX_ABIERTA} caracteres.`;
     return null;
   }
 
@@ -146,7 +147,9 @@ export function validarEncuesta(
     const valor: ValorRespuesta = {};
     if (v && typeof v === "object") {
       if (Array.isArray(v.codigos)) valor.codigos = v.codigos.map(String);
-      if (typeof v.texto === "string") valor.texto = limpiarTexto(v.texto);
+      if (typeof v.texto === "string") {
+        valor.texto = limpiarTexto(v.texto, p.tipo === "abierta" ? MAX_ABIERTA : MAX_TEXTO);
+      }
       if (v.items && typeof v.items === "object") {
         valor.items = Object.fromEntries(
           Object.entries(v.items).map(([k, x]) => [String(k), String(x)]),

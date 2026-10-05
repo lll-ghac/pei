@@ -105,4 +105,7 @@ export const PREFIERO_NO = "97";
 export const POR_AHORA_NO = "96";
 export const EXCLUYENTES = [NO_SE, PREFIERO_NO, POR_AHORA_NO];
 
+/** Texto de "Otra". */
 export const MAX_TEXTO = 500;
+/** Respuestas abiertas (2030, un cambio concreto): más espacio para desarrollar una idea. */
+export const MAX_ABIERTA = 1000;

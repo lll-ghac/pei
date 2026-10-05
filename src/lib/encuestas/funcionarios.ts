@@ -9,7 +9,7 @@ export const funcionarios: Encuesta = {
   titulo: "Encuesta para docentes y asistentes de la educación",
   introduccion: [
     "Esta encuesta es parte del proceso de actualización del PEI. Es anónima y sus resultados serán procesados y presentados solo de forma agrupada. Las respuestas sobre gestión se informan en total o separadas solo entre docentes y asistentes, nunca por persona ni en grupos de menos de 5.",
-    "Toma unos 19 minutos. Responda según su experiencia; si no tiene opinión, marque «No sé» o «Prefiero no responder» donde aparezca. Su credencial se sacó al azar: nadie sabe cuál recibió usted. En las respuestas escritas, por favor no escriba nombres de personas: si aparecen, se reemplazan antes de analizar.",
+    "Toma unos 19 minutos. Responda según su experiencia; si no tiene opinión, marque \"No sé\" o \"Prefiero no responder\" donde aparezca. Su credencial se sacó al azar: nadie sabe cuál recibió usted. En las respuestas escritas, por favor no escriba nombres de personas: si aparecen, se reemplazan antes de analizar.",
   ],
   minutos: 19,
   despedida: "¡Gracias por su aporte!",

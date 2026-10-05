@@ -11,6 +11,7 @@ import {
   ENCUESTAS,
   EXCLUYENTES,
   OTRA,
+  MAX_ABIERTA,
   MAX_TEXTO,
   opcionesDe,
   preguntasDe,
@@ -662,7 +663,7 @@ function PantallaPregunta({
           </p>
           <textarea
             value={texto}
-            maxLength={MAX_TEXTO}
+            maxLength={MAX_ABIERTA}
             onChange={(e) => onCambio({ texto: e.target.value })}
             rows={6}
             aria-label={pregunta.texto}
@@ -674,7 +675,7 @@ function PantallaPregunta({
             }}
           />
           <p className="mt-1 text-right text-[18px] text-gris-texto">
-            {texto.length} / {MAX_TEXTO}
+            {texto.length} / {MAX_ABIERTA}
           </p>
         </div>
       </div>
@@ -706,7 +707,9 @@ function PantallaPregunta({
       nuevos = [...elegidos.filter((c) => !EXCLUYENTES.includes(c)), codigo];
       if (nuevos.length > limite) {
         setAviso(
-          esEstudiante ? `Puedes elegir ${limite}. Quita una para cambiarla.` : `Puede elegir ${limite}. Quite una para cambiarla.`,
+          esEstudiante
+            ? `Ya marcaste ${limite}; desmarca una para cambiar.`
+            : `Ya marcó ${limite}; desmarque una para cambiar.`,
         );
         return;
       }
@@ -725,12 +728,13 @@ function PantallaPregunta({
       )}
       <div className="border-t border-filete divide-y divide-filete" role={multiple ? "group" : "radiogroup"} aria-label={pregunta.texto}>
         {opciones.map((o, i) => {
+          const sinNumero = opciones.some((x) => /^\d/.test(x.texto));
           const activa = elegidos.includes(o.codigo);
           const letra = /^[a-o]$/.test(o.codigo);
           return (
             <div key={o.codigo}>
               <Fila
-                numero={letra ? o.codigo : String(i + 1)}
+                numero={letra ? o.codigo : sinNumero ? "" : String(i + 1)}
                 texto={o.codigo === OTRA ? `${o.texto}:` : o.texto}
                 activa={activa}
                 multiple={multiple}
@@ -754,11 +758,19 @@ function PantallaPregunta({
           );
         })}
       </div>
-      {aviso && (
-        <p role="status" className="border-t border-filete px-5 sm:px-8 py-3 text-[18px] text-timbre font-bold">
-          {aviso}
-        </p>
-      )}
+      {/* Fijo justo sobre la barra inferior en celular: si quedara al final de la lista, la barra lo taparía. */}
+      <p
+        role="status"
+        aria-live="polite"
+        className={aviso ? "sticky bottom-[4.75rem] z-20 sm:static flex items-center gap-3 bg-tinta text-papel px-5 sm:px-8 py-3 text-[18px] font-bold" : "sr-only"}
+      >
+        {aviso && (
+          <>
+            <span className="sello text-[12px] text-papel shrink-0">Máximo</span>
+            {aviso}
+          </>
+        )}
+      </p>
     </div>
   );
 }

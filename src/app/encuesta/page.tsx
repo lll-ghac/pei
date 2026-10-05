@@ -36,7 +36,7 @@ export default async function PaginaEncuesta() {
           <>
             <Ayuda />
             <form action={salir}>
-              <button type="submit" className="rounded-[2px] px-3 min-h-12 font-bold text-white/85 hover:bg-white/10">
+              <button type="submit" className="rounded-[2px] px-2 sm:px-3 min-h-12 font-bold text-white/85 hover:bg-white/10">
                 Salir
               </button>
             </form>
