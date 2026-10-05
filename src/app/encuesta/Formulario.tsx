@@ -530,23 +530,24 @@ function Encabezado({
           <blockquote className="mt-1 text-[18px] italic">«{pregunta.cita.texto}»</blockquote>
         </figure>
       )}
-      <div className="flex items-start gap-3">
-        <span className="rotulo text-[32px] leading-none text-timbre pt-0.5 w-9 shrink-0" aria-hidden>
+      {/* Columna del número a 3rem: caben los números de dos dígitos (10 a 21) sin pegarse al texto. */}
+      <div className="grid grid-cols-[3rem_1fr_auto] items-start gap-x-3">
+        <span className="rotulo text-[32px] leading-none text-timbre pt-0.5" aria-hidden>
           {pregunta.numero}
         </span>
-        <h1 ref={titulo} tabIndex={-1} className="titulo flex-1 text-[24px] sm:text-[28px] outline-none">
+        <h1 ref={titulo} tabIndex={-1} className="titulo text-[24px] sm:text-[28px] outline-none">
           <span className="sr-only">Pregunta {pregunta.numero}. </span>
           {pregunta.texto}
         </h1>
         <LeerEnVozAlta texto={lectura} />
+        {(pregunta.indicacion || extra) && (
+          <p className="col-start-2 col-span-2 mt-2 text-[18px] text-grafito">
+            {pregunta.indicacion}
+            {pregunta.indicacion && extra && <span className="text-filete"> · </span>}
+            {extra && <strong className="text-tinta">{extra}</strong>}
+          </p>
+        )}
       </div>
-      {(pregunta.indicacion || extra) && (
-        <p className="mt-2 pl-12 text-[18px] text-grafito">
-          {pregunta.indicacion}
-          {pregunta.indicacion && extra && <span className="text-filete"> · </span>}
-          {extra && <strong className="text-tinta">{extra}</strong>}
-        </p>
-      )}
     </div>
   );
 }

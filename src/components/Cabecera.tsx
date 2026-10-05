@@ -30,7 +30,11 @@ export function Cabecera({ logo = "escudo", detalle, derecha, ancho = "angosto" 
               )}
             </span>
             <span className="min-w-0 leading-tight">
-              <span className="rotulo block text-[14px] sm:text-[15px] text-white whitespace-nowrap">Encuesta PEI 2027</span>
+              {/* En celular, título corto: a 360 px o con letra del teléfono agrandada no choca con Ayuda. */}
+              <span className="rotulo block text-[15px] text-white whitespace-nowrap">
+                <span className="sm:hidden">PEI 2027</span>
+                <span className="hidden sm:inline">Encuesta PEI 2027</span>
+              </span>
               <span className="hidden sm:block text-[14px] text-white/80">
                 {detalle ?? "Escuela República del Ecuador E‑79"}
               </span>
