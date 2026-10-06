@@ -10,7 +10,7 @@ mv app-nueva app
 chown -R app:app app
 systemctl restart encuesta-pei
 for i in $(seq 1 20); do
-  if curl -fsS -o /dev/null http://127.0.0.1:8080/; then
+  if curl -fs -o /dev/null http://127.0.0.1:8080/; then
     echo "OK: versión $(cat app/VERSION 2>/dev/null) activa"
     exit 0
   fi
