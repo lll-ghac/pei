@@ -7,7 +7,7 @@ import { exigirGestor } from "@/lib/gestion";
 export async function GET() {
   const g = await exigirGestor();
   const estado = await leerEstado();
-  if (!estado.cerrada) return new Response("La encuesta no está cerrada.", { status: 409 });
+  if (!estado.cerrada && estado.modo !== "prueba") return new Response("La encuesta no está cerrada.", { status: 409 });
   const prueba = estado.modo === "prueba";
   await sincronizarTextos(prueba);
   if ((await pendientes(prueba)) > 0) return new Response("Aún hay textos por revisar.", { status: 409 });

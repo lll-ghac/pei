@@ -9,6 +9,7 @@ import type { Estamento } from "@/lib/encuestas";
 import { guardarEstado, leerEstado, registrar } from "@/lib/estado";
 import { aplicarClasificacion, confirmarSinNombres, guardarRevision, revisarClasificacion } from "@/lib/abiertas";
 import { exigirGestor, generarLote, reiniciarACero } from "@/lib/gestion";
+import { cargarDatosPrueba } from "@/lib/datos-prueba";
 import { ipCliente, permitir } from "@/lib/limite";
 import { cerrarGestion, iniciarGestion } from "@/lib/sesion";
 
@@ -254,12 +255,23 @@ export async function reabrirPrueba() {
   revalidatePath("/", "layout");
 }
 
+/** Solo en modo Prueba: agrega respuestas de prueba al azar para ensayar resultados y abiertas. */
+export async function sembrarPrueba(): Promise<Aviso> {
+  const g = await exigirGestor("admin");
+  const estado = await leerEstado();
+  if (estado.modo !== "prueba") return { error: "Solo se puede en modo Prueba." };
+  const n = await cargarDatosPrueba();
+  await registrar(g.usuario, "Respuestas de prueba generadas", `${n} respuestas al azar (modo Prueba)`);
+  revalidatePath("/", "layout");
+  return { ok: `Se agregaron ${n} respuestas de prueba. Véalas en Resultados y en Abiertas.` };
+}
+
 // ----- Respuestas abiertas: revisión de nombres -----
 
 export async function guardarTexto(form: FormData) {
   await exigirGestor();
   const estado = await leerEstado();
-  if (!estado.cerrada) return;
+  if (!estado.cerrada && estado.modo !== "prueba") return;
   const id = String(form.get("id") ?? "");
   const texto = String(form.get("texto") ?? "");
   const accion = form.get("accion") === "no_publicar" ? "no_publicar" : "revisado";
@@ -271,7 +283,7 @@ export async function guardarTexto(form: FormData) {
 export async function confirmarRevisados(form: FormData) {
   const g = await exigirGestor();
   const estado = await leerEstado();
-  if (!estado.cerrada) return;
+  if (!estado.cerrada && estado.modo !== "prueba") return;
   const ids = form.getAll("id").map(String).filter((x) => /^[0-9a-f-]{36}$/.test(x));
   const n = await confirmarSinNombres(ids, estado.modo === "prueba");
   if (n) await registrar(g.usuario, "Textos revisados sin nombres", String(n));
@@ -312,7 +324,7 @@ export type AvisoImportacion = Aviso & { resumen?: { filas: number; sinClasifica
 export async function importarClasificacion(_p: AvisoImportacion, form: FormData): Promise<AvisoImportacion> {
   const g = await exigirGestor();
   const estado = await leerEstado();
-  if (!estado.cerrada) return { error: "La encuesta no está cerrada." };
+  if (!estado.cerrada && estado.modo !== "prueba") return { error: "La encuesta no está cerrada." };
   const prueba = estado.modo === "prueba";
   let contenido = String(form.get("contenido") ?? "");
   const archivo = form.get("archivo");

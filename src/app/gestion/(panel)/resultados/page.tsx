@@ -3,6 +3,7 @@ import { ENCUESTAS, preguntasDe, type Estamento } from "@/lib/encuestas";
 import { listarTemas, listarTextos, sincronizarTextos } from "@/lib/abiertas";
 import { leerEstado } from "@/lib/estado";
 import { exigirGestor } from "@/lib/gestion";
+import { AvisoEnsayo } from "../../Ayuda";
 import {
   COMPARABLES,
   MINIMO,
@@ -48,7 +49,7 @@ export default async function Resultados(props: PageProps<"/gestion/resultados">
   const vista = (VISTAS.find((v) => v.id === q.ver)?.id ?? "resumen") as Vista;
   const grupo = (["docentes", "asistentes"].includes(String(q.grupo)) ? q.grupo : "todos") as GrupoFuncionarios;
 
-  if (!estado.cerrada) {
+  if (!estado.cerrada && estado.modo !== "prueba") {
     return (
       <div className="space-y-4 max-w-[70ch]">
         <h1 className="titulo text-[30px]">Resultados</h1>
@@ -58,9 +59,7 @@ export default async function Resultados(props: PageProps<"/gestion/resultados">
           antes y el después de un envío.
         </p>
         <p className="text-grafito">
-          {estado.modo === "prueba"
-            ? "En modo Prueba se puede cerrar para ensayar con los datos de prueba y volver a abrir después (Panel → Sistema)."
-            : "En modo Oficial el cierre es definitivo."}
+          En modo Oficial el cierre es definitivo.
         </p>
       </div>
     );
@@ -85,6 +84,7 @@ export default async function Resultados(props: PageProps<"/gestion/resultados">
           ))}
         </p>
       </div>
+      {!estado.cerrada && <AvisoEnsayo />}
 
       <nav aria-label="Vistas de resultados" className="border-b border-filete">
         <ul className="flex flex-wrap -mb-px">

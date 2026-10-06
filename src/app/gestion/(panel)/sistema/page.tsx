@@ -11,7 +11,9 @@ import {
   pasarAOficial,
   reabrirPrueba,
   reiniciar,
+  sembrarPrueba,
 } from "../../acciones";
+import { CANTIDADES } from "@/lib/datos-prueba";
 import { FormularioAviso } from "../../FormularioAviso";
 
 const campo = "w-full min-w-0 rounded-[2px] border border-grafito bg-tarjeta px-3 py-2 text-base";
@@ -82,6 +84,19 @@ export default async function Sistema() {
           </form>
         )}
       </section>
+
+      {estado.modo === "prueba" && (
+        <section className={tarjeta}>
+          <h2 className="rotulo text-[17px]">Respuestas de prueba</h2>
+          <p className="text-[17px] max-w-[80ch]">
+            Agrega {CANTIDADES.A} respuestas de apoderados, {CANTIDADES.E} de estudiantes y {CANTIDADES.F} de
+            funcionarios, al azar, para ver Resultados y Abiertas con datos. Algunos textos traen nombres a propósito,
+            para ensayar la revisión. No cuentan en el avance (no usan credenciales) y el reinicio a cero las borra.
+            Se puede usar varias veces.
+          </p>
+          <FormularioAviso accion={sembrarPrueba} boton="Agregar respuestas de prueba" />
+        </section>
+      )}
 
       <section className={tarjeta}>
         <h2 className="rotulo text-[17px]">Cierre y resultados</h2>
