@@ -1,4 +1,5 @@
 import type { FilaAvance } from "@/lib/gestion";
+import { NIVELES } from "@/lib/cursos-iniciales";
 
 type Conteo = { usadas: number; base: number };
 
@@ -24,12 +25,6 @@ function Celda({ c, fuerte }: { c: Conteo | null; fuerte?: boolean }) {
   );
 }
 
-const NIVELES: Record<string, string> = {
-  parvularia: "Educación Parvularia",
-  basica_1_4: "1° a 4° básico",
-  basica_5_8: "5° a 8° básico",
-  opcion4: "PIE Opción 4",
-};
 
 function suma(cs: (Conteo | null)[]): Conteo {
   return cs.reduce<Conteo>((a, c) => (c ? { usadas: a.usadas + c.usadas, base: a.base + c.base } : a), {

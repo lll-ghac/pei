@@ -13,7 +13,7 @@ export async function GET() {
   if ((await pendientes(prueba)) > 0) return new Response("Aún hay textos por revisar.", { status: 409 });
   const { n, csv } = await archivoAbiertas(prueba);
   const huella = createHash("sha256").update(csv, "utf8").digest("hex");
-  await registrar(g.usuario, "Abiertas exportadas", `${n} textos · SHA-256 ${huella}`);
+  await registrar(g.usuario, "Abiertas exportadas", `abiertas${prueba ? "-PRUEBA" : ""}.csv · ${n} textos · SHA-256 ${huella}`);
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",

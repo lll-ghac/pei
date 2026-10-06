@@ -1,6 +1,6 @@
 "use server";
 
-import { and, count, eq } from "drizzle-orm";
+import { and, count, desc, eq, ilike } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
@@ -381,4 +381,29 @@ export async function cambiarTema(form: FormData) {
   await db.update(schema.temas).set({ activo }).where(eq(schema.temas.codigo, codigo));
   await registrar(g.usuario, activo ? "Tema reactivado" : "Tema desactivado", codigo);
   revalidatePath("/gestion/abiertas");
+}
+
+// ----- Huellas digitales -----
+
+const fechaHuella = new Intl.DateTimeFormat("es-CL", { timeZone: "America/Santiago", dateStyle: "long", timeStyle: "short" });
+
+/** Busca en la bitácora una huella SHA-256 calculada en el navegador (el archivo no se sube). */
+export async function verificarHuella(codigo: string): Promise<Aviso> {
+  await exigirGestor();
+  const h = codigo.trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(h)) return { error: "No se pudo calcular la huella del archivo." };
+  const [fila] = await db
+    .select()
+    .from(schema.bitacora)
+    .where(ilike(schema.bitacora.detalle, `%${h}%`))
+    .orderBy(desc(schema.bitacora.id))
+    .limit(1);
+  if (!fila) {
+    return {
+      error: `Esta huella no está en la bitácora: el archivo no es idéntico a ninguno descargado de la plataforma (o se abrió y se volvió a guardar). Huella: ${h}`,
+    };
+  }
+  return {
+    ok: `Archivo original: coincide con «${fila.accion}» del ${fechaHuella.format(fila.fecha)}, descargado por ${fila.actor}. ${fila.detalle?.replace(/ · SHA-256 .*/, "") ?? ""}`,
+  };
 }

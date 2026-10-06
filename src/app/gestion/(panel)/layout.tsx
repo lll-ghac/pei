@@ -14,6 +14,7 @@ export default async function LayoutPanel({ children }: LayoutProps<"/gestion">)
     { href: "/gestion", texto: "Avance" },
     { href: "/gestion/resultados", texto: "Resultados" },
     { href: "/gestion/abiertas", texto: "Abiertas" },
+    { href: "/gestion/descargas", texto: "Descargas" },
     { href: "/gestion/encuestas", texto: "Encuestas" },
     { href: "/gestion/credenciales", texto: "Credenciales" },
     ...(g.rol === "admin"

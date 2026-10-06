@@ -43,3 +43,11 @@ export const CURSOS_INICIALES: CursoInicial[] = [
 ];
 
 export const FUNCIONARIOS_INICIALES = 120;
+
+/** Nombre de cada nivel, para tablas y archivos. */
+export const NIVELES: Record<string, string> = {
+  parvularia: "Educación Parvularia",
+  basica_1_4: "1° a 4° básico",
+  basica_5_8: "5° a 8° básico",
+  opcion4: "PIE Opción 4",
+};
