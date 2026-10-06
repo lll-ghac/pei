@@ -1,6 +1,6 @@
 import { asc } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { leerEstado } from "@/lib/estado";
+import { CONTACTO_POR_DEFECTO, leerContacto, leerEstado } from "@/lib/estado";
 import { exigirGestor } from "@/lib/gestion";
 import {
   cambiarClavePropia,
@@ -10,6 +10,7 @@ import {
   crearCuenta,
   pasarAOficial,
   reabrirPrueba,
+  guardarAyuda,
   reiniciar,
   sembrarPrueba,
 } from "../../acciones";
@@ -21,8 +22,9 @@ const tarjeta = "rounded-[3px] bg-tarjeta border border-borde p-5 space-y-3";
 
 export default async function Sistema() {
   const g = await exigirGestor("admin");
-  const [estado, cuentas] = await Promise.all([
+  const [estado, contacto, cuentas] = await Promise.all([
     leerEstado(),
+    leerContacto(),
     db.select().from(schema.gestores).orderBy(asc(schema.gestores.id)),
   ]);
 
@@ -130,6 +132,28 @@ export default async function Sistema() {
             </FormularioAviso>
           </>
         )}
+      </section>
+
+      <section className={tarjeta}>
+        <h2 className="rotulo text-[17px]">Contacto en la Ayuda</h2>
+        <p className="text-[17px] max-w-[80ch]">
+          Es el texto que ve cada participante al final de la ventana «Ayuda» (en el ingreso y en la encuesta): a quién
+          pedir una papeleta de reserva o avisar un problema. Se pueden usar varias líneas. Si se deja vacío, se usa el
+          texto por defecto.
+        </p>
+        <FormularioAviso accion={guardarAyuda} boton="Guardar texto" className="space-y-3 max-w-2xl">
+          <label className="grid gap-1 text-base font-bold">
+            Texto de contacto (máx. 400 caracteres)
+            <textarea
+              name="contacto"
+              rows={4}
+              maxLength={400}
+              defaultValue={contacto === CONTACTO_POR_DEFECTO ? "" : contacto}
+              placeholder={CONTACTO_POR_DEFECTO}
+              className={campo + " font-normal"}
+            />
+          </label>
+        </FormularioAviso>
       </section>
 
       <section className={tarjeta}>

@@ -13,6 +13,7 @@ export default async function LayoutPanel({ children }: LayoutProps<"/gestion">)
   const enlaces = [
     { href: "/gestion", texto: "Avance" },
     { href: "/gestion/resultados", texto: "Resultados" },
+    { href: "/gestion/informe", texto: "Informe" },
     { href: "/gestion/abiertas", texto: "Abiertas" },
     { href: "/gestion/descargas", texto: "Descargas" },
     { href: "/gestion/encuestas", texto: "Encuestas" },

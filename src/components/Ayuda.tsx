@@ -26,7 +26,7 @@ const PREGUNTAS = [
   },
 ];
 
-export function Ayuda() {
+export function Ayuda({ contacto }: { contacto: string }) {
   const ref = useRef<HTMLDialogElement>(null);
   return (
     <>
@@ -65,7 +65,7 @@ export function Ayuda() {
           ))}
         </dl>
         <div className="border-t border-filete px-5 py-4 text-[17px] space-y-2">
-          <p>¿Problemas con su papeleta? Hable con su profesor jefe o con alguien de la comisión del PEI.</p>
+          <p className="whitespace-pre-line">{contacto}</p>
           <p className="flex flex-wrap gap-x-4">
             <a className="text-timbre underline font-bold" href="/anonimato" target="_blank">
               Cómo protegemos el anonimato

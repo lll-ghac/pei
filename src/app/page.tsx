@@ -3,16 +3,16 @@ import Link from "next/link";
 import { Ayuda } from "@/components/Ayuda";
 import { Cabecera } from "@/components/Cabecera";
 import { FranjaPrueba } from "@/components/FranjaPrueba";
-import { leerEstado } from "@/lib/estado";
+import { leerContacto, leerEstado } from "@/lib/estado";
 import { FormularioIngreso } from "./FormularioIngreso";
 
 export default async function Inicio() {
-  const estado = await leerEstado();
+  const [estado, contacto] = await Promise.all([leerEstado(), leerContacto()]);
 
   return (
     <div className="flex-1 flex flex-col">
       <FranjaPrueba visible={estado.modo === "prueba"} />
-      <Cabecera ancho="medio" derecha={<Ayuda />} />
+      <Cabecera ancho="medio" derecha={<Ayuda contacto={contacto} />} />
 
       {/*
         Celular: título breve, luego el formulario (se ve sin bajar) y después la explicación.

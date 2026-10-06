@@ -133,8 +133,8 @@ export async function reiniciarACero(autor: string) {
       .where(eq(schema.credenciales.prueba, false));
     await tx
       .insert(schema.ajustes)
-      .values({ clave: "estado", valor: { ...estado, cerrada: false } })
-      .onConflictDoUpdate({ target: schema.ajustes.clave, set: { valor: { ...estado, cerrada: false } } });
+      .values({ clave: "estado", valor: { ...estado, cerrada: false, publicados: false } })
+      .onConflictDoUpdate({ target: schema.ajustes.clave, set: { valor: { ...estado, cerrada: false, publicados: false } } });
     await tx.insert(schema.bitacora).values({
       actor: autor,
       accion: "Reinicio a cero",

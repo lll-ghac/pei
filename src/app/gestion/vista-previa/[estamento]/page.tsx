@@ -4,6 +4,7 @@ import { Formulario } from "@/app/encuesta/Formulario";
 import { Ayuda } from "@/components/Ayuda";
 import { Cabecera } from "@/components/Cabecera";
 import type { Estamento } from "@/lib/encuestas";
+import { leerContacto } from "@/lib/estado";
 import { exigirGestor } from "@/lib/gestion";
 
 export const metadata = { title: "Vista previa · Encuesta PEI 2027" };
@@ -23,7 +24,7 @@ export default async function VistaPrevia(props: PageProps<"/gestion/vista-previ
         detalle="Vista previa · nada se guarda"
         derecha={
           <>
-            <Ayuda />
+            <Ayuda contacto={await leerContacto()} />
             <Link
               href="/gestion/encuestas"
               className="rounded-[2px] px-3 min-h-12 inline-flex items-center font-bold text-white/85 no-underline hover:bg-white/10"

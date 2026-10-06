@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { aleatorio, hashClave, verificarClave } from "@/lib/cripto";
 import type { Estamento } from "@/lib/encuestas";
-import { guardarEstado, leerEstado, registrar } from "@/lib/estado";
+import { guardarContacto, guardarEstado, leerEstado, registrar } from "@/lib/estado";
 import { aplicarClasificacion, confirmarSinNombres, guardarRevision, revisarClasificacion } from "@/lib/abiertas";
 import { exigirGestor, generarLote, reiniciarACero } from "@/lib/gestion";
 import { cargarDatosPrueba } from "@/lib/datos-prueba";
@@ -143,7 +143,7 @@ export async function pasarAOficial(_p: Aviso, form: FormData): Promise<Aviso> {
   if (respuestas > 0 || deprueba > 0) {
     return { error: "Antes de pasar a Oficial haga el reinicio a cero: aún hay respuestas o credenciales de prueba." };
   }
-  await guardarEstado({ modo: "oficial", abierta: false, cerrada: false });
+  await guardarEstado({ modo: "oficial", abierta: false, cerrada: false, publicados: false });
   await registrar(g.usuario, "Paso a modo Oficial", "Reinicio bloqueado desde ahora");
   revalidatePath("/", "layout");
   return { ok: "La plataforma está en modo Oficial. Abra el periodo cuando la comisión lo indique." };
@@ -406,4 +406,33 @@ export async function verificarHuella(codigo: string): Promise<Aviso> {
   return {
     ok: `Archivo original: coincide con «${fila.accion}» del ${fechaHuella.format(fila.fecha)}, descargado por ${fila.actor}. ${fila.detalle?.replace(/ · SHA-256 .*/, "") ?? ""}`,
   };
+}
+
+// ----- Ayuda -----
+
+/** Texto de contacto que ve cada participante en «Ayuda». Vacío = texto por defecto. */
+export async function guardarAyuda(_p: Aviso, form: FormData): Promise<Aviso> {
+  const g = await exigirGestor("admin");
+  const texto = String(form.get("contacto") ?? "").replace(/\r\n/g, "\n").trim();
+  if (texto.length > 400) return { error: "Máximo 400 caracteres." };
+  await guardarContacto(texto);
+  await registrar(g.usuario, "Texto de contacto de Ayuda actualizado", texto ? texto.slice(0, 120) : "(texto por defecto)");
+  revalidatePath("/", "layout");
+  return { ok: texto ? "Guardado. Ya aparece en la Ayuda de la encuesta." : "Se volvió al texto por defecto." };
+}
+
+// ----- Página pública de resultados -----
+
+export async function cambiarPublicacion(form: FormData) {
+  const g = await exigirGestor("admin");
+  const estado = await leerEstado();
+  const publicar = form.get("accion") === "publicar";
+  if (publicar && !estado.cerrada && estado.modo !== "prueba") return;
+  await guardarEstado({ publicados: publicar });
+  await registrar(
+    g.usuario,
+    publicar ? "Resultados publicados para la comunidad" : "Página pública de resultados retirada",
+    estado.modo === "prueba" ? "Modo Prueba (datos de prueba)" : undefined,
+  );
+  revalidatePath("/", "layout");
 }
