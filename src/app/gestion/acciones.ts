@@ -7,6 +7,7 @@ import { db, schema } from "@/db";
 import { aleatorio, hashClave, verificarClave } from "@/lib/cripto";
 import type { Estamento } from "@/lib/encuestas";
 import { guardarEstado, leerEstado, registrar } from "@/lib/estado";
+import { aplicarClasificacion, confirmarSinNombres, guardarRevision, revisarClasificacion } from "@/lib/abiertas";
 import { exigirGestor, generarLote, reiniciarACero } from "@/lib/gestion";
 import { ipCliente, permitir } from "@/lib/limite";
 import { cerrarGestion, iniciarGestion } from "@/lib/sesion";
@@ -251,4 +252,121 @@ export async function reabrirPrueba() {
   await guardarEstado({ cerrada: false });
   await registrar(g.usuario, "Reapertura del ensayo (modo Prueba)");
   revalidatePath("/", "layout");
+}
+
+// ----- Respuestas abiertas: revisión de nombres -----
+
+export async function guardarTexto(form: FormData) {
+  await exigirGestor();
+  const estado = await leerEstado();
+  if (!estado.cerrada) return;
+  const id = String(form.get("id") ?? "");
+  const texto = String(form.get("texto") ?? "");
+  const accion = form.get("accion") === "no_publicar" ? "no_publicar" : "revisado";
+  if (!/^[0-9a-f-]{36}$/.test(id) || !texto.trim()) return;
+  await guardarRevision(id, texto, accion);
+  revalidatePath("/gestion/abiertas");
+}
+
+export async function confirmarRevisados(form: FormData) {
+  const g = await exigirGestor();
+  const estado = await leerEstado();
+  if (!estado.cerrada) return;
+  const ids = form.getAll("id").map(String).filter((x) => /^[0-9a-f-]{36}$/.test(x));
+  const n = await confirmarSinNombres(ids, estado.modo === "prueba");
+  if (n) await registrar(g.usuario, "Textos revisados sin nombres", String(n));
+  revalidatePath("/gestion/abiertas");
+}
+
+/** Lista del personal (una persona por línea): reemplaza la anterior. Solo administración. */
+export async function guardarPersonal(form: FormData) {
+  const g = await exigirGestor("admin");
+  const nombres = [
+    ...new Set(
+      String(form.get("nombres") ?? "")
+        .split(/\r?\n/)
+        .map((x) => x.trim().replace(/\s+/g, " "))
+        .filter((x) => x.length >= 3 && x.length <= 80),
+    ),
+  ].slice(0, 400);
+  await db.transaction(async (tx) => {
+    await tx.delete(schema.nombresPersonal);
+    if (nombres.length) await tx.insert(schema.nombresPersonal).values(nombres.map((nombre) => ({ nombre })));
+  });
+  await registrar(g.usuario, "Lista del personal actualizada", `${nombres.length} nombres`);
+  revalidatePath("/gestion/abiertas");
+}
+
+export async function borrarPersonal() {
+  const g = await exigirGestor("admin");
+  await db.delete(schema.nombresPersonal);
+  await registrar(g.usuario, "Lista del personal borrada");
+  revalidatePath("/gestion/abiertas");
+}
+
+// ----- Respuestas abiertas: importar clasificación y temas -----
+
+export type AvisoImportacion = Aviso & { resumen?: { filas: number; sinClasificar: number; porTema: [string, number][] }; contenido?: string };
+
+/** Paso 1 revisa el archivo y muestra un resumen; paso 2 (confirmar) lo aplica. Cada carga reemplaza la anterior. */
+export async function importarClasificacion(_p: AvisoImportacion, form: FormData): Promise<AvisoImportacion> {
+  const g = await exigirGestor();
+  const estado = await leerEstado();
+  if (!estado.cerrada) return { error: "La encuesta no está cerrada." };
+  const prueba = estado.modo === "prueba";
+  let contenido = String(form.get("contenido") ?? "");
+  const archivo = form.get("archivo");
+  if (!contenido && archivo instanceof File && archivo.size > 0) {
+    if (archivo.size > 3_000_000) return { error: "El archivo es demasiado grande (máximo 3 MB)." };
+    contenido = await archivo.text();
+  }
+  if (!contenido) return { error: "Elija el archivo con la clasificación." };
+  const r = await revisarClasificacion(contenido, prueba);
+  if (r.errores.length) {
+    return {
+      error: `El archivo tiene ${r.errores.length} problema(s); no se cargó nada. ${r.errores.slice(0, 8).join(" ")}${r.errores.length > 8 ? " …" : ""}`,
+    };
+  }
+  const resumen = {
+    filas: r.filas.length,
+    sinClasificar: r.sinClasificar,
+    porTema: Object.entries(r.porTema).sort((a, b) => b[1] - a[1]),
+  };
+  if (form.get("confirmar") !== "si") {
+    return { ok: "Archivo válido. Revise el resumen y confirme la carga.", resumen, contenido };
+  }
+  await aplicarClasificacion(r.filas, prueba);
+  await registrar(g.usuario, "Clasificación de abiertas cargada", `${r.filas.length} textos; reemplaza la carga anterior`);
+  revalidatePath("/gestion", "layout");
+  return { ok: `Clasificación cargada: ${r.filas.length} textos.` };
+}
+
+export async function guardarTema(form: FormData) {
+  const g = await exigirGestor("admin");
+  const codigo = String(form.get("codigo") ?? "");
+  const nombre = String(form.get("nombre") ?? "").trim().slice(0, 80);
+  const descripcion = String(form.get("descripcion") ?? "").trim().slice(0, 200);
+  if (!nombre) return;
+  if (codigo) {
+    await db.update(schema.temas).set({ nombre, descripcion }).where(eq(schema.temas.codigo, codigo));
+    await registrar(g.usuario, "Tema editado", `${codigo}: ${nombre}`);
+  } else {
+    // Código siguiente: T19, T20… (T98 y T99 quedan reservados).
+    const usados = (await db.select({ c: schema.temas.codigo, o: schema.temas.orden }).from(schema.temas)).map((x) => x);
+    const nums = usados.map((x) => Number(x.c.slice(1))).filter((x) => x < 98);
+    const nuevo = `T${String(Math.max(18, ...nums) + 1).padStart(2, "0")}`;
+    if (Number(nuevo.slice(1)) >= 98) return;
+    await db.insert(schema.temas).values({ codigo: nuevo, nombre, descripcion, orden: Math.max(...usados.map((x) => x.o)) + 1 });
+    await registrar(g.usuario, "Tema agregado", `${nuevo}: ${nombre}`);
+  }
+  revalidatePath("/gestion/abiertas");
+}
+
+export async function cambiarTema(form: FormData) {
+  const g = await exigirGestor("admin");
+  const codigo = String(form.get("codigo") ?? "");
+  const activo = form.get("accion") === "activar";
+  await db.update(schema.temas).set({ activo }).where(eq(schema.temas.codigo, codigo));
+  await registrar(g.usuario, activo ? "Tema reactivado" : "Tema desactivado", codigo);
+  revalidatePath("/gestion/abiertas");
 }

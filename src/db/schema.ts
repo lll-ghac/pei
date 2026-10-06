@@ -114,3 +114,43 @@ export const observaciones = pgTable("observaciones", {
   resuelta: boolean("resuelta").notNull().default(false),
   resueltaPor: text("resuelta_por"),
 });
+
+/**
+ * Textos libres (respuestas abiertas y «Otra») para revisar nombres y clasificar por temas.
+ * `id` es el identificador que sale en el archivo exportado: aleatorio y distinto del de la urna,
+ * para que el archivo no se pueda cruzar con la planilla de respuestas.
+ */
+export const textos = pgTable("textos", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  respuestaId: uuid("respuesta_id")
+    .notNull()
+    .references(() => respuestas.id, { onDelete: "cascade" }),
+  /** Código de la pregunta (A19, F21…; también A3, E4… cuando es el texto de «Otra»). */
+  pregunta: text("pregunta").notNull(),
+  estamento: text("estamento").notNull(),
+  /** pendiente | revisado | no_publicar */
+  estado: text("estado").notNull().default("pendiente"),
+  tema1: text("tema_1"),
+  tema2: text("tema_2"),
+  tema3: text("tema_3"),
+  temaNuevo: text("tema_nuevo"),
+  cita: boolean("cita").notNull().default(false),
+});
+
+/** Temas para clasificar los textos (lista inicial aprobada T01–T18, T98, T99; ampliable). */
+export const temas = pgTable("temas", {
+  codigo: text("codigo").primaryKey(),
+  nombre: text("nombre").notNull(),
+  descripcion: text("descripcion").notNull().default(""),
+  activo: boolean("activo").notNull().default(true),
+  orden: integer("orden").notNull(),
+});
+
+/**
+ * Nombres del personal, solo para marcar posibles nombres en los textos.
+ * No sale del servidor y se borra al cerrar el proceso.
+ */
+export const nombresPersonal = pgTable("nombres_personal", {
+  id: serial("id").primaryKey(),
+  nombre: text("nombre").notNull().unique(),
+});

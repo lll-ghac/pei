@@ -64,7 +64,7 @@ export function BarrasOpciones({ opciones, e, ordenar }: { opciones: ConteoOpcio
 }
 
 /** Comparación entre estamentos: tabla con barra por celda (más de 7 opciones: la tabla manda). */
-export function TablaComparativa({ filas, estamentos }: { filas: FilaComparable[]; estamentos: Estamento[] }) {
+export function TablaComparativa({ filas, estamentos, encabezado = "Opción" }: { filas: FilaComparable[]; estamentos: Estamento[]; encabezado?: string }) {
   const prom = (f: FilaComparable) => {
     const v = estamentos.map((e) => f.pct[e]).filter((x): x is number => typeof x === "number");
     return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 0;
@@ -75,7 +75,7 @@ export function TablaComparativa({ filas, estamentos }: { filas: FilaComparable[
       <table className="w-full min-w-[36rem] text-[16px]">
         <thead>
           <tr className="text-left">
-            <th scope="col" className="rotulo text-[13px] text-grafito pb-1.5 pr-3 w-[34%]">Opción</th>
+            <th scope="col" className="rotulo text-[13px] text-grafito pb-1.5 pr-3 w-[34%]">{encabezado}</th>
             {estamentos.map((e) => (
               <th key={e} scope="col" className="rotulo text-[13px] text-grafito pb-1.5 px-2">
                 <span className="inline-flex items-center gap-1.5">

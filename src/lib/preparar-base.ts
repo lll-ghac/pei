@@ -1,6 +1,7 @@
 import path from "node:path";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { db, schema } from "@/db";
+import { TEMAS_INICIALES } from "./abiertas";
 import { CURSOS_INICIALES, FUNCIONARIOS_INICIALES } from "./cursos-iniciales";
 
 export async function prepararBase() {
@@ -28,5 +29,11 @@ export async function prepararBase() {
       accion: "Base inicial",
       detalle: `${CURSOS_INICIALES.length} cursos cargados; modo Prueba`,
     });
+  }
+
+  // Lista inicial aprobada de temas, si aún no existe.
+  const [hayTemas] = await db.select({ c: schema.temas.codigo }).from(schema.temas).limit(1);
+  if (!hayTemas) {
+    await db.insert(schema.temas).values(TEMAS_INICIALES.map((t, i) => ({ ...t, orden: i + 1 })));
   }
 }

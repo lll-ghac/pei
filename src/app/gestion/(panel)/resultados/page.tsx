@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ENCUESTAS, preguntasDe, type Estamento } from "@/lib/encuestas";
+import { listarTemas, listarTextos, sincronizarTextos } from "@/lib/abiertas";
 import { leerEstado } from "@/lib/estado";
 import { exigirGestor } from "@/lib/gestion";
 import {
@@ -29,6 +30,7 @@ const VISTAS = [
   { id: "resumen", texto: "Resumen" },
   { id: "prioridades", texto: "Prioridades y sellos" },
   { id: "escalas", texto: "Escalas" },
+  { id: "abiertas", texto: "Abiertas" },
   { id: "A", texto: "Apoderados" },
   { id: "E", texto: "Estudiantes" },
   { id: "F", texto: "Funcionarios" },
@@ -178,6 +180,73 @@ export default async function Resultados(props: PageProps<"/gestion/resultados">
           })}
         </div>
       )}
+
+      {vista === "abiertas" &&
+        (await (async () => {
+          await sincronizarTextos(prueba);
+          const [textos, temas] = await Promise.all([listarTextos(prueba), listarTemas()]);
+          const clasificados = textos.filter((t) => t.estado === "revisado" && t.tema1);
+          if (!clasificados.length) {
+            return (
+              <p className="text-grafito max-w-[75ch]">
+                Aún no hay clasificación cargada. Primero se revisan los nombres y se carga la clasificación en Panel →
+                Abiertas.
+              </p>
+            );
+          }
+          const est = (["A", "E", "F"] as Estamento[]).filter((e) => clasificados.filter((t) => t.estamento === e).length >= MINIMO);
+          const nE = Object.fromEntries((["A", "E", "F"] as Estamento[]).map((e) => [e, clasificados.filter((t) => t.estamento === e).length]));
+          const filas = temas
+            .map((t) => {
+              const pct: Partial<Record<Estamento, number | null>> = {};
+              for (const e of ["A", "E", "F"] as Estamento[]) {
+                const lista = clasificados.filter((x) => x.estamento === e);
+                pct[e] = lista.length < MINIMO ? null : (lista.filter((x) => [x.tema1, x.tema2, x.tema3].includes(t.codigo)).length / lista.length) * 100;
+              }
+              return { opcion: { codigo: t.codigo, texto: `${t.codigo} · ${t.nombre}` }, pct };
+            })
+            .filter((f) => Object.values(f.pct).some((v) => (v ?? 0) > 0));
+          const nuevos = clasificados.filter((t) => t.temaNuevo).map((t) => t.temaNuevo!);
+          const citas = clasificados.filter((t) => t.cita);
+          return (
+            <div className="space-y-8">
+              <section className="bg-papel border border-filete p-5">
+                <h2 className="text-[20px] font-bold">Temas de las respuestas abiertas</h2>
+                <p className="text-[15px] text-grafito mb-3">
+                  % de textos clasificados que mencionan cada tema (un texto puede tener hasta 3) ·{" "}
+                  {(["A", "E", "F"] as Estamento[]).map((e) => `${NOMBRE[e]} n=${nE[e]}`).join(" · ")}
+                </p>
+                {est.length ? <TablaComparativa filas={filas} estamentos={est} encabezado="Tema" /> : <p className="text-gris-texto">Ningún estamento llega a {MINIMO} textos clasificados.</p>}
+              </section>
+              {nuevos.length > 0 && (
+                <section className="bg-papel border border-filete p-5">
+                  <h2 className="text-[20px] font-bold">Temas nuevos propuestos (T98)</h2>
+                  <ul className="mt-2 columns-1 sm:columns-2 text-[16px]">
+                    {[...new Set(nuevos)].map((x) => (
+                      <li key={x}>
+                        {x} <span className="text-grafito">({nuevos.filter((y) => y === x).length})</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              <section className="bg-papel border border-filete p-5">
+                <h2 className="text-[20px] font-bold">Citas destacadas ({citas.length})</h2>
+                <p className="text-[15px] text-grafito mb-3">Textos ya revisados, sin nombres de personas.</p>
+                <ul className="space-y-3">
+                  {citas.map((c) => (
+                    <li key={c.id} className="border-l border-grafito pl-3">
+                      <p className="text-[17px]">«{c.texto}»</p>
+                      <p className="text-[14px] text-grafito">
+                        {NOMBRE[c.estamento]} · {c.pregunta}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          );
+        })())}
 
       {(vista === "A" || vista === "E" || vista === "F") &&
         (() => {
