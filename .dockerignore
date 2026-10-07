@@ -4,3 +4,4 @@ node_modules
 .env*
 respaldos
 despliegue/*.tar.gz
+pruebas

@@ -1,0 +1,12 @@
+{
+  "name": "encuesta-pei-pruebas",
+  "private": true,
+  "type": "module",
+  "description": "Pruebas de punta a punta con un navegador automático. No forman parte de la app.",
+  "scripts": {
+    "regresion": "node regresion.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.56.0"
+  }
+}

@@ -243,3 +243,18 @@ a {
     display: none;
   }
 }
+
+/* Impresión (manual de profesores jefes): A4, fondo blanco y colores exactos. */
+@media print {
+  @page {
+    size: A4;
+    margin: 11mm;
+  }
+  body {
+    background: #ffffff;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

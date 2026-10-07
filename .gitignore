@@ -50,3 +50,7 @@ next-env.d.ts
 /.impeccable/questions/
 /.impeccable/decision-*.json
 /.impeccable/brief-*.md
+
+# pruebas de punta a punta (dependencias propias)
+/pruebas/node_modules
+/pruebas/salida

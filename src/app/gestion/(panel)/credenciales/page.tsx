@@ -37,6 +37,13 @@ export default async function Credenciales() {
           Las credenciales se generan por lotes (un curso y un estamento) y se imprimen en papeletas que se
           reparten al azar. Nadie anota qué papeleta recibe cada persona.
         </p>
+        <p className="mt-2 text-base">
+          Para los profesores jefes:{" "}
+          <a href="/manual/profesores" target="_blank" className="text-timbre underline font-bold">
+            manual de una página
+          </a>{" "}
+          (se imprime o se comparte el enlace encuesta.escuelaecuador.cl/manual/profesores).
+        </p>
       </div>
 
       {g.rol === "admin" && (

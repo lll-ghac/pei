@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Pruebas de punta a punta: proyecto aparte, con sus propias dependencias.
+    "pruebas/**",
   ]),
 ]);
 
