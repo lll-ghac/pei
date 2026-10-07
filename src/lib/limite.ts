@@ -28,6 +28,20 @@ export function permitir(clave: string): boolean {
   return r.n <= MAXIMO;
 }
 
+/**
+ * Ingreso de participantes: solo cuentan los intentos FALLIDOS por conexión. Toda la escuela sale a
+ * internet con una sola IP (laboratorio, consejo de profesores con ~120 funcionarios): los ingresos
+ * correctos no deben gastar el cupo; un programa que adivina credenciales falla siempre y se frena igual.
+ */
+export function fallosExcedidos(clave: string): boolean {
+  const r = intentos.get(clave);
+  return !!r && Date.now() - r.inicio <= VENTANA_MS && r.n >= MAXIMO;
+}
+
+export function sumarFallo(clave: string) {
+  permitir(clave);
+}
+
 function limpiar(ahora: number) {
   for (const [k, v] of intentos) if (ahora - v.inicio > VENTANA_MS) intentos.delete(k);
 }

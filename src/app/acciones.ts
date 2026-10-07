@@ -6,7 +6,7 @@ import { db, schema } from "@/db";
 import { compararSeguro, normalizarCredencial } from "@/lib/cripto";
 import { ENCUESTAS, validarEncuesta, type Estamento } from "@/lib/encuestas";
 import { leerEstado, puedeResponder } from "@/lib/estado";
-import { contarFallido, ipCliente, permitir } from "@/lib/limite";
+import { contarFallido, fallosExcedidos, ipCliente, sumarFallo } from "@/lib/limite";
 import { cerrarParticipante, iniciarParticipante, leerParticipante } from "@/lib/sesion";
 
 export type EstadoIngreso = { error?: string; usuario?: string };
@@ -19,7 +19,8 @@ export async function ingresar(_previo: EstadoIngreso, form: FormData): Promise<
   const clave = normalizarCredencial(String(form.get("clave") ?? ""));
 
   if (!usuario || !clave) return { error: "Escriba su usuario y su contraseña.", usuario };
-  if (!permitir(await ipCliente())) {
+  const ip = "participante:" + (await ipCliente());
+  if (fallosExcedidos(ip)) {
     return { error: "Hay demasiados intentos desde esta conexión. Espere un minuto.", usuario };
   }
 
@@ -30,6 +31,7 @@ export async function ingresar(_previo: EstadoIngreso, form: FormData): Promise<
 
   if (!cred) {
     contarFallido();
+    sumarFallo(ip);
     return { error: "No encontramos ese usuario. Revise que esté bien escrito.", usuario };
   }
   if (cred.bloqueadaHasta && cred.bloqueadaHasta > new Date()) {
@@ -37,6 +39,7 @@ export async function ingresar(_previo: EstadoIngreso, form: FormData): Promise<
   }
   if (!compararSeguro(clave, cred.clave)) {
     contarFallido();
+    sumarFallo(ip);
     const n = cred.intentosFallidos + 1;
     await db
       .update(schema.credenciales)
