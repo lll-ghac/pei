@@ -164,7 +164,7 @@ if (process.env.CLAVE_DEV) {
   await p.click("button[type=submit]");
   await p.waitForURL(BASE + "/gestion", { timeout: 20000 }).catch(() => {});
   ok(p.url() === BASE + "/gestion", "ingreso al panel");
-  for (const r of ["", "/resultados", "/informe", "/abiertas", "/descargas", "/encuestas", "/encuestas/E", "/credenciales", "/cursos", "/sistema", "/bitacora"]) {
+  for (const r of ["", "/resultados", "/informe", "/abiertas", "/descargas", "/encuestas", "/encuestas/E", "/credenciales", "/cursos", "/sistema", "/bitacora", "/manual", "/cuenta"]) {
     const resp = await p.goto(BASE + "/gestion" + r);
     const texto = await p.locator("main").innerText().catch(() => "");
     ok(resp?.status() === 200 && !/Algo salió mal|Error/.test(texto.slice(0, 200)), `panel ${r || "/"} (${resp?.status()})`);

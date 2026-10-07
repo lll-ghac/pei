@@ -193,6 +193,23 @@ export async function cambiarCuenta(form: FormData) {
   revalidatePath("/gestion/sistema");
 }
 
+/** Asigna una contraseña nueva a otra cuenta (olvido o entrega). Se muestra una sola vez. */
+export async function restablecerClave(_p: Aviso, form: FormData): Promise<Aviso> {
+  const g = await exigirGestor("admin");
+  const id = Number(form.get("id"));
+  if (!id) return { error: "Elija una cuenta." };
+  if (id === g.id) return { error: "Su propia contraseña se cambia en Mi cuenta." };
+  const clave = aleatorio(4) + "-" + aleatorio(4) + "-" + aleatorio(4);
+  const [c] = await db
+    .update(schema.gestores)
+    .set({ claveHash: await hashClave(clave) })
+    .where(eq(schema.gestores.id, id))
+    .returning({ usuario: schema.gestores.usuario });
+  if (!c) return { error: "Esa cuenta no existe." };
+  await registrar(g.usuario, "Contraseña nueva asignada", c.usuario);
+  return { ok: `Contraseña nueva para "${c.usuario}". Entréguela en persona; no se volverá a mostrar:`, clave };
+}
+
 // ----- Observaciones de la comisión sobre las encuestas -----
 
 export async function agregarObservacion(form: FormData) {

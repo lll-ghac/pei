@@ -3,7 +3,6 @@ import { db, schema } from "@/db";
 import { CONTACTO_POR_DEFECTO, leerContacto, leerEstado } from "@/lib/estado";
 import { exigirGestor } from "@/lib/gestion";
 import {
-  cambiarClavePropia,
   cambiarCuenta,
   cambiarPeriodo,
   cerrarEncuesta,
@@ -12,6 +11,7 @@ import {
   reabrirPrueba,
   guardarAyuda,
   reiniciar,
+  restablecerClave,
   sembrarPrueba,
 } from "../../acciones";
 import { CANTIDADES } from "@/lib/datos-prueba";
@@ -192,6 +192,27 @@ export default async function Sistema() {
             </tbody>
           </table>
         </div>
+        <h3 className="font-bold pt-2">Asignar contraseña nueva</h3>
+        <p className="text-base text-gris-texto">
+          Si alguien olvidó su contraseña. La anterior deja de servir. Cada persona puede cambiarla después en Mi cuenta.
+        </p>
+        <FormularioAviso accion={restablecerClave} boton="Asignar contraseña nueva" className="grid gap-3 sm:grid-cols-[minmax(0,20rem)_auto] items-end">
+          <label className="grid gap-1 min-w-0 text-base font-bold">
+            Cuenta
+            <select name="id" className={campo} defaultValue="">
+              <option value="" disabled>
+                Elija una cuenta
+              </option>
+              {cuentas
+                .filter((c) => c.id !== g.id)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.usuario} · {c.nombre}
+                  </option>
+                ))}
+            </select>
+          </label>
+        </FormularioAviso>
         <h3 className="font-bold pt-2">Crear cuenta</h3>
         <FormularioAviso accion={crearCuenta} boton="Crear cuenta" className="grid gap-3 sm:grid-cols-4 items-end">
           <label className="grid gap-1 min-w-0 text-base font-bold">
@@ -212,19 +233,6 @@ export default async function Sistema() {
         </FormularioAviso>
       </section>
 
-      <section className={tarjeta}>
-        <h2 className="rotulo text-[17px]">Mi contraseña</h2>
-        <FormularioAviso accion={cambiarClavePropia} boton="Cambiar contraseña" className="grid gap-3 sm:grid-cols-3 items-end">
-          <label className="grid gap-1 min-w-0 text-base font-bold">
-            Actual
-            <input name="actual" type="password" autoComplete="current-password" className={campo} />
-          </label>
-          <label className="grid gap-1 min-w-0 text-base font-bold">
-            Nueva (mínimo 12 caracteres)
-            <input name="nueva" type="password" autoComplete="new-password" className={campo} />
-          </label>
-        </FormularioAviso>
-      </section>
     </div>
   );
 }
