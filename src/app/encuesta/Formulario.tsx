@@ -872,7 +872,9 @@ function PantallaItem({
             <Fila
               key={o.codigo}
               numero={String(i + 1)}
-              icono={conCaritas ? <Carita size={34} weight={i === 3 ? "fill" : "regular"} /> : undefined}
+              // Todas las caritas iguales de peso: ninguna opción se ve destacada antes de elegir.
+              // Solo la elegida se rellena, como marca de lo que se respondió.
+              icono={conCaritas ? <Carita size={34} weight={valor === o.codigo ? "fill" : "regular"} /> : undefined}
               texto={o.texto}
               activa={valor === o.codigo}
               multiple={false}
