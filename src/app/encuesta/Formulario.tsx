@@ -547,12 +547,12 @@ function Intro({
   const tu = estamento === "E";
   const pasos = tu
     ? [
-        "Lee cada pregunta y marca tu respuesta.",
+        "Lee cada pregunta, marca tu respuesta y toca «Siguiente».",
         "Puedes volver atrás y cambiarla antes de terminar.",
         "Al final, tu papeleta se dobla y cae en la urna.",
       ]
     : [
-        "Lea cada pregunta y marque su respuesta.",
+        "Lea cada pregunta, marque su respuesta y toque «Siguiente».",
         "Puede volver atrás y cambiarla antes de terminar.",
         "Al final, su papeleta se dobla y cae en la urna.",
       ];

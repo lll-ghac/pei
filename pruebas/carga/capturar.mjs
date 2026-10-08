@@ -41,8 +41,6 @@ async function responder(p) {
     pantallas++;
     const radios = p.locator("[role=radio]");
     const checks = p.locator("[role=checkbox]");
-    // Las frases de escala muestran «Frase N de M» y avanzan solas al elegir.
-    const enEscala = /frase \d+ de \d+/i.test(await p.locator("main").innerText());
     if (await checks.count()) {
       const texto = await p.locator("main").innerText();
       const n = Number(texto.match(/exactamente (\d)/i)?.[1] ?? 1);
@@ -54,16 +52,16 @@ async function responder(p) {
         marcadas++;
       }
     } else if (await radios.count()) {
-      for (let i = 0; i < (await radios.count()); i++) {
-        const r = radios.nth(i);
-        if (NO_ELEGIR.test((await r.innerText()).replace(/^\d+\s*/, "").trim())) continue;
-        await r.click();
-        break;
-      }
-      if (enEscala) {
-        // Las frases de escala avanzan solas al elegir.
-        await p.waitForTimeout(450);
-        continue;
+      // Una pantalla puede tener varios grupos (una escala: un grupo por frase): se marca uno en cada uno.
+      const grupos = p.locator("[role=radiogroup]");
+      for (let g = 0; g < (await grupos.count()); g++) {
+        const rs = grupos.nth(g).locator("[role=radio]");
+        for (let i = 0; i < (await rs.count()); i++) {
+          const r = rs.nth(i);
+          if (NO_ELEGIR.test((await r.innerText()).replace(/^\d+\s*/, "").trim())) continue;
+          await r.click();
+          break;
+        }
       }
     }
     await p.getByRole("button", { name: /^(Siguiente|Volver al resumen)$/ }).click();

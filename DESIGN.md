@@ -219,6 +219,8 @@ Columna única centrada, con la banda de timbre al mismo ancho que el contenido 
 
 Las opciones son filas a todo el ancho de la hoja en una grilla de tres columnas: número (36 px, o 44 px si lleva icono), texto, y marca (32 px), con 12 px entre columnas, 14 px de alto interno y 60 px de alto mínimo. Sobre la hoja va el avance: «PREGUNTA N DE M» con el tiempo restante a la derecha y una franja de etapas a escala fija, un segmento de 5 px por sección (grafito = hecha, timbre = actual, filete = pendiente), con el nombre de cada sección debajo solo en escritorio y la sección actual en una línea propia en celular.
 
+**Escalas (A5, E2, F7):** una pregunta, una pantalla, como la tabla del papel: cada frase en negrita con sus opciones debajo, y en funcionarios el nombre de cada grupo como subtítulo. Marcar nunca avanza solo: se avanza con «Siguiente», y si falta una frase queda con fondo lacre claro, borde lacre a la izquierda y el sello «Falta», y la pantalla baja hasta ella (decisión de Ger tras el piloto de funcionarios, 8/10).
+
 En celular la barra de navegación (Anterior en bloque secundario, Siguiente en bloque verde) queda fija abajo sobre papel con un filete superior; en escritorio vuelve al flujo bajo la hoja.
 
 **The Cuarenta y Ocho Rule.** Todo lo que se toca mide al menos 48 px de alto; botones de bloque 52 px, filas 60 px.
