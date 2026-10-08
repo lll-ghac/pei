@@ -17,19 +17,28 @@ import { ESCALAS } from "./encuestas/listas";
 export const MINIMO = 5;
 
 /** Respuestas de la urna del modo indicado, por estamento. Nunca hay credenciales, fechas ni horas. */
-export async function cargarUrna(prueba: boolean): Promise<Record<Estamento, Respuestas[]>> {
+export async function cargarUrna(
+  prueba: boolean,
+): Promise<Record<Estamento, Respuestas[]>> {
   const filas = await db
-    .select({ estamento: schema.respuestas.estamento, datos: schema.respuestas.datos })
+    .select({
+      estamento: schema.respuestas.estamento,
+      datos: schema.respuestas.datos,
+    })
     .from(schema.respuestas)
     .where(eq(schema.respuestas.prueba, prueba));
   const urna: Record<Estamento, Respuestas[]> = { A: [], E: [], F: [] };
-  for (const f of filas) urna[f.estamento as Estamento]?.push(f.datos as Respuestas);
+  for (const f of filas)
+    urna[f.estamento as Estamento]?.push(f.datos as Respuestas);
   return urna;
 }
 
 /** Subgrupo de funcionarios por función (F1): solo para separar docentes y asistentes. */
 export type GrupoFuncionarios = "todos" | "docentes" | "asistentes";
-export function filtrarFuncionarios(lista: Respuestas[], grupo: GrupoFuncionarios) {
+export function filtrarFuncionarios(
+  lista: Respuestas[],
+  grupo: GrupoFuncionarios,
+) {
   if (grupo === "todos") return lista;
   const codigo = grupo === "docentes" ? "1" : "2";
   return lista.filter((r) => r.F1?.codigos?.[0] === codigo);
@@ -50,8 +59,19 @@ export type ConteoItem = {
 };
 
 export type ResumenPregunta =
-  | { tipo: "opciones"; pregunta: Pregunta; n: number; opciones: ConteoOpcion[]; textosOtra: number }
-  | { tipo: "escala"; pregunta: Pregunta & { tipo: "escala" }; n: number; items: ConteoItem[] }
+  | {
+      tipo: "opciones";
+      pregunta: Pregunta;
+      n: number;
+      opciones: ConteoOpcion[];
+      textosOtra: number;
+    }
+  | {
+      tipo: "escala";
+      pregunta: Pregunta & { tipo: "escala" };
+      n: number;
+      items: ConteoItem[];
+    }
   | { tipo: "abierta"; pregunta: Pregunta; n: number; escritas: number };
 
 const pct = (a: number, b: number) => (b > 0 ? (a / b) * 100 : 0);
@@ -64,9 +84,18 @@ function opcionesBase(p: Pregunta, encuesta: Encuesta): Opcion[] {
   return "opciones" in p ? p.opciones : [];
 }
 
-export function resumir(p: Pregunta, lista: Respuestas[], encuesta: Encuesta): ResumenPregunta {
+export function resumir(
+  p: Pregunta,
+  lista: Respuestas[],
+  encuesta: Encuesta,
+): ResumenPregunta {
   if (p.tipo === "abierta") {
-    return { tipo: "abierta", pregunta: p, n: lista.length, escritas: lista.filter((r) => r[p.codigo]?.texto).length };
+    return {
+      tipo: "abierta",
+      pregunta: p,
+      n: lista.length,
+      escritas: lista.filter((r) => r[p.codigo]?.texto).length,
+    };
   }
   if (p.tipo === "escala") {
     const items: ConteoItem[] = p.grupos.flatMap((g) =>
@@ -94,10 +123,14 @@ export function resumir(p: Pregunta, lista: Respuestas[], encuesta: Encuesta): R
     );
     return { tipo: "escala", pregunta: p, n: lista.length, items };
   }
-  const respondieron = lista.filter((r) => (r[p.codigo]?.codigos ?? []).length > 0);
+  const respondieron = lista.filter(
+    (r) => (r[p.codigo]?.codigos ?? []).length > 0,
+  );
   const n = respondieron.length;
   const opciones = opcionesBase(p, encuesta).map((o) => {
-    const conteo = respondieron.filter((r) => r[p.codigo]!.codigos!.includes(o.codigo)).length;
+    const conteo = respondieron.filter((r) =>
+      r[p.codigo]!.codigos!.includes(o.codigo),
+    ).length;
     return { ...o, conteo, pct: pct(conteo, n) };
   });
   const textosOtra = respondieron.filter((r) => r[p.codigo]?.texto).length;
@@ -111,44 +144,173 @@ export type Comparable = {
   codigos: Partial<Record<Estamento, string>>;
   opciones: Opcion[];
   nota?: string;
+  /** Opciones con orden propio (Sí / Más o menos / No): se muestran en ese orden, no por porcentaje. */
+  ordinal?: boolean;
 };
 
+const MARCA = (k: number) =>
+  `% de personas que la eligieron; cada una marcaba ${k}, por eso las columnas no suman 100%.`;
+
 export const COMPARABLES: Comparable[] = [
-  { titulo: "Conocimiento del lema o los sellos actuales", codigos: { A: "A2", E: "E1", F: "F2" }, opciones: L.CON_ADULTOS },
-  { titulo: "Propósito principal de la escuela", codigos: { A: "A8", E: "E5", F: "F5" }, opciones: L.PROP_ADULTOS, nota: "Se marcaban exactamente 2." },
-  { titulo: "Valores que deberían guiar a la escuela", codigos: { A: "A15", E: "E10", F: "F16" }, opciones: L.VAL_ADULTOS, nota: "Se marcaban exactamente 3." },
-  { titulo: "Perfil de egreso", codigos: { A: "A16", E: "E11", F: "F17" }, opciones: L.PER_ADULTOS, nota: "Se marcaban exactamente 3." },
-  { titulo: "Perfil docente", codigos: { A: "A17", E: "E12", F: "F18" }, opciones: L.DOC_ADULTOS, nota: "Se marcaban exactamente 3." },
-  { titulo: "Perfil de la familia", codigos: { A: "A18", F: "F19" }, opciones: L.FAM, nota: "No se preguntó a estudiantes." },
-  { titulo: "Redes con el entorno", codigos: { A: "A14", E: "E9", F: "F14" }, opciones: L.RED_ADULTOS, nota: "Máximo 2." },
+  {
+    titulo: "Conocimiento del lema o los sellos actuales",
+    codigos: { A: "A2", E: "E1", F: "F2" },
+    opciones: L.CON_ADULTOS,
+    nota: "Una respuesta por persona: cada columna suma 100%.",
+    ordinal: true,
+  },
+  {
+    titulo: "Propósito principal de la escuela",
+    codigos: { A: "A8", E: "E5", F: "F5" },
+    opciones: L.PROP_ADULTOS,
+    nota: MARCA(2),
+  },
+  {
+    titulo: "Valores que deberían guiar a la escuela",
+    codigos: { A: "A15", E: "E10", F: "F16" },
+    opciones: L.VAL_ADULTOS,
+    nota: MARCA(3),
+  },
+  {
+    titulo: "Perfil de egreso",
+    codigos: { A: "A16", E: "E11", F: "F17" },
+    opciones: L.PER_ADULTOS,
+    nota: MARCA(3),
+  },
+  {
+    titulo: "Perfil docente",
+    codigos: { A: "A17", E: "E12", F: "F18" },
+    opciones: L.DOC_ADULTOS,
+    nota: MARCA(3),
+  },
+  {
+    titulo: "Perfil de la familia",
+    codigos: { A: "A18", F: "F19" },
+    opciones: L.FAM,
+    nota: `${MARCA(3)} No se preguntó a estudiantes.`,
+  },
+  {
+    titulo: "Redes con el entorno",
+    codigos: { A: "A14", E: "E9", F: "F14" },
+    opciones: L.RED_ADULTOS,
+    nota: "% de personas que la eligieron; cada una marcaba hasta 2, por eso las columnas no suman 100%.",
+  },
 ];
 
-export type FilaComparable = { opcion: Opcion; pct: Partial<Record<Estamento, number | null>> };
+export type FilaComparable = {
+  opcion: Opcion;
+  pct: Partial<Record<Estamento, number | null>>;
+};
 
 export function comparar(c: Comparable, urna: Record<Estamento, Respuestas[]>) {
   const n: Partial<Record<Estamento, number>> = {};
-  for (const [e, codigo] of Object.entries(c.codigos) as [Estamento, string][]) {
+  for (const [e, codigo] of Object.entries(c.codigos) as [
+    Estamento,
+    string,
+  ][]) {
     n[e] = urna[e].filter((r) => (r[codigo]?.codigos ?? []).length > 0).length;
   }
   const filas: FilaComparable[] = c.opciones.map((o) => {
     const fila: FilaComparable = { opcion: o, pct: {} };
-    for (const [e, codigo] of Object.entries(c.codigos) as [Estamento, string][]) {
+    for (const [e, codigo] of Object.entries(c.codigos) as [
+      Estamento,
+      string,
+    ][]) {
       const total = n[e] ?? 0;
       fila.pct[e] =
-        total < MINIMO ? null : pct(urna[e].filter((r) => r[codigo]?.codigos?.includes(o.codigo)).length, total);
+        total < MINIMO
+          ? null
+          : pct(
+              urna[e].filter((r) => r[codigo]?.codigos?.includes(o.codigo))
+                .length,
+              total,
+            );
     }
     return fila;
   });
   return { n, filas };
 }
 
+// ---------- Cómo se lee una comparación (Resultados, Informe y página pública) ----------
+
+/** Bajo este n, los porcentajes saltan mucho: una persona pesa varios puntos. */
+export const POCOS_CASOS = 30;
+/** Listas largas: se recogen las opciones bajo este % en todos los estamentos. */
+const BAJO = 10;
+
+export type FilaVista = {
+  texto: string;
+  pct: Partial<Record<Estamento, number | null>>;
+  /** Lugar (1, 2 o 3) de la opción dentro de cada estamento; los empates comparten lugar. */
+  lugar: Partial<Record<Estamento, number>>;
+  /** Fila menor (bajo 10% en todos y sin lugar): va en «Ver todas». */
+  menor: boolean;
+};
+
+export function prepararComparativa(opciones: {
+  filas: { texto: string; pct: Partial<Record<Estamento, number | null>> }[];
+  estamentos: Estamento[];
+  n: Partial<Record<Estamento, number>>;
+  ordinal?: boolean;
+}): { filas: FilaVista[]; pocos: string | null } {
+  const { estamentos, n } = opciones;
+  const lugar = opciones.filas.map(
+    () => ({}) as Partial<Record<Estamento, number>>,
+  );
+  for (const e of estamentos) {
+    const valores = opciones.filas.map((f) => f.pct[e] ?? 0);
+    valores.forEach((v, i) => {
+      const rango = 1 + valores.filter((x) => x > v).length;
+      if (v > 0 && rango <= 3) lugar[i][e] = rango;
+    });
+  }
+  const prom = (f: { pct: Partial<Record<Estamento, number | null>> }) =>
+    estamentos.reduce((s, e) => s + (f.pct[e] ?? 0), 0) /
+    Math.max(1, estamentos.length);
+  let filas: FilaVista[] = opciones.filas.map((f, i) => ({
+    texto: f.texto,
+    pct: f.pct,
+    lugar: lugar[i],
+    menor:
+      !opciones.ordinal &&
+      estamentos.every((e) => (f.pct[e] ?? 0) < BAJO) &&
+      Object.keys(lugar[i]).length === 0,
+  }));
+  if (!opciones.ordinal) filas = filas.sort((a, b) => prom(b) - prom(a));
+  // Solo se recoge si la lista es larga y se esconden al menos 3; si no, se muestran todas.
+  const menores = filas.filter((f) => f.menor).length;
+  if (filas.length <= 8 || menores < 3)
+    filas = filas.map((f) => ({ ...f, menor: false }));
+  const pocos = estamentos
+    .filter((e) => (n[e] ?? 0) > 0 && (n[e] ?? 0) < POCOS_CASOS)
+    .map(
+      (e) =>
+        `${e === "A" ? "Apoderados" : e === "E" ? "Estudiantes" : "Funcionarios"} n = ${n[e]} (1 persona = ${Math.round(100 / n[e]!)} puntos)`,
+    );
+  return {
+    filas,
+    pocos: pocos.length
+      ? `Pocos casos: ${pocos.join(" · ")}. Lea los porcentajes con cuidado.`
+      : null,
+  };
+}
+
 // ---------- Prioridades y sellos candidatos ----------
 
 const TOP3: Record<Estamento, string> = { A: "A9", E: "E6", F: "F9" };
-const MAS_IMPORTANTE: Record<Estamento, string> = { A: "A10", E: "E7", F: "F10" };
+const MAS_IMPORTANTE: Record<Estamento, string> = {
+  A: "A10",
+  E: "E7",
+  F: "F10",
+};
 const POR_QUE: Record<Estamento, string> = { A: "A11", E: "E8", F: "F11" };
 
-export type CeldaPrioridad = { pctTop3: number; rango: number; enTop5: boolean; masImportante: number } | null;
+export type CeldaPrioridad = {
+  pctTop3: number;
+  rango: number;
+  enTop5: boolean;
+  masImportante: number;
+} | null;
 export type FilaPrioridad = {
   opcion: Opcion;
   por: Record<Estamento, CeldaPrioridad>;
@@ -156,35 +318,77 @@ export type FilaPrioridad = {
   candidato: boolean;
   converge: boolean;
   /** Razones de quienes la eligieron como la más importante (todos los estamentos). */
-  razones: { debilidad: number; fortaleza: number; futuro: number; sector: number; distinguiria: number; otra: number; total: number };
+  razones: {
+    debilidad: number;
+    fortaleza: number;
+    futuro: number;
+    sector: number;
+    distinguiria: number;
+    otra: number;
+    total: number;
+  };
 };
 
 export function prioridades(urna: Record<Estamento, Respuestas[]>) {
-  const n: Record<Estamento, number> = { A: urna.A.length, E: urna.E.length, F: urna.F.length };
+  const n: Record<Estamento, number> = {
+    A: urna.A.length,
+    E: urna.E.length,
+    F: urna.F.length,
+  };
   const validos = (Object.keys(n) as Estamento[]).filter((e) => n[e] >= MINIMO);
   const base = L.PRIORIDADES_ADULTOS;
 
-  const porEstamento: Record<Estamento, Map<string, CeldaPrioridad>> = { A: new Map(), E: new Map(), F: new Map() };
+  const porEstamento: Record<Estamento, Map<string, CeldaPrioridad>> = {
+    A: new Map(),
+    E: new Map(),
+    F: new Map(),
+  };
   for (const e of validos) {
     const lista = urna[e];
     const filas = base.map((o) => ({
       codigo: o.codigo,
-      pctTop3: pct(lista.filter((r) => r[TOP3[e]]?.codigos?.includes(o.codigo)).length, lista.length),
-      masImportante: lista.filter((r) => r[MAS_IMPORTANTE[e]]?.codigos?.[0] === o.codigo).length,
+      pctTop3: pct(
+        lista.filter((r) => r[TOP3[e]]?.codigos?.includes(o.codigo)).length,
+        lista.length,
+      ),
+      masImportante: lista.filter(
+        (r) => r[MAS_IMPORTANTE[e]]?.codigos?.[0] === o.codigo,
+      ).length,
     }));
-    const orden = [...filas].sort((a, b) => b.pctTop3 - a.pctTop3 || b.masImportante - a.masImportante);
+    const orden = [...filas].sort(
+      (a, b) => b.pctTop3 - a.pctTop3 || b.masImportante - a.masImportante,
+    );
     // Rango por competencia (1, 2, 2, 4…): los empates comparten lugar.
     orden.forEach((f, i) => {
-      const rango = i > 0 && f.pctTop3 === orden[i - 1].pctTop3 ? porEstamento[e].get(orden[i - 1].codigo)!.rango : i + 1;
-      porEstamento[e].set(f.codigo, { pctTop3: f.pctTop3, masImportante: f.masImportante, rango, enTop5: rango <= 5 && f.pctTop3 > 0 });
+      const rango =
+        i > 0 && f.pctTop3 === orden[i - 1].pctTop3
+          ? porEstamento[e].get(orden[i - 1].codigo)!.rango
+          : i + 1;
+      porEstamento[e].set(f.codigo, {
+        pctTop3: f.pctTop3,
+        masImportante: f.masImportante,
+        rango,
+        enTop5: rango <= 5 && f.pctTop3 > 0,
+      });
     });
   }
 
   const filas: FilaPrioridad[] = base.map((o) => {
-    const por = { A: null, E: null, F: null } as Record<Estamento, CeldaPrioridad>;
+    const por = { A: null, E: null, F: null } as Record<
+      Estamento,
+      CeldaPrioridad
+    >;
     for (const e of validos) por[e] = porEstamento[e].get(o.codigo) ?? null;
     const estamentosTop5 = validos.filter((e) => por[e]?.enTop5).length;
-    const razones = { debilidad: 0, fortaleza: 0, futuro: 0, sector: 0, distinguiria: 0, otra: 0, total: 0 };
+    const razones = {
+      debilidad: 0,
+      fortaleza: 0,
+      futuro: 0,
+      sector: 0,
+      distinguiria: 0,
+      otra: 0,
+      total: 0,
+    };
     for (const e of ["A", "E", "F"] as Estamento[]) {
       for (const r of urna[e]) {
         if (r[MAS_IMPORTANTE[e]]?.codigos?.[0] !== o.codigo) continue;
@@ -217,7 +421,9 @@ export function prioridades(urna: Record<Estamento, Respuestas[]>) {
 }
 
 function promedioRango(f: FilaPrioridad) {
-  const r = Object.values(f.por).filter(Boolean).map((c) => c!.rango);
+  const r = Object.values(f.por)
+    .filter(Boolean)
+    .map((c) => c!.rango);
   return r.length ? r.reduce((s, x) => s + x, 0) / r.length : 99;
 }
 

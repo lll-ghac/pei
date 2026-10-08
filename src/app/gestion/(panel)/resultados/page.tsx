@@ -123,7 +123,7 @@ export default async function Resultados(props: PageProps<"/gestion/resultados">
                   {(Object.entries(c.codigos) as [Estamento, string][]).map(([e, cod]) => `${cod} (n=${nc[e] ?? 0})`).join(" · ")}
                   {c.nota ? ` · ${c.nota}` : ""}
                 </p>
-                {est.length ? <TablaComparativa filas={filas} estamentos={est} /> : <p className="text-gris-texto">Ningún estamento llega a {MINIMO} respuestas.</p>}
+                {est.length ? <TablaComparativa filas={filas} estamentos={est} n={nc} ordinal={c.ordinal} /> : <p className="text-gris-texto">Ningún estamento llega a {MINIMO} respuestas.</p>}
               </section>
             );
           })}
@@ -216,7 +216,7 @@ export default async function Resultados(props: PageProps<"/gestion/resultados">
                   % de textos clasificados que mencionan cada tema (un texto puede tener hasta 3) ·{" "}
                   {(["A", "E", "F"] as Estamento[]).map((e) => `${NOMBRE[e]} n=${nE[e]}`).join(" · ")}
                 </p>
-                {est.length ? <TablaComparativa filas={filas} estamentos={est} encabezado="Tema" /> : <p className="text-gris-texto">Ningún estamento llega a {MINIMO} textos clasificados.</p>}
+                {est.length ? <TablaComparativa filas={filas} estamentos={est} n={nE} encabezado="Tema" /> : <p className="text-gris-texto">Ningún estamento llega a {MINIMO} textos clasificados.</p>}
               </section>
               {nuevos.length > 0 && (
                 <section className="bg-papel border border-filete p-5">

@@ -3,7 +3,7 @@
 import {
   Barra,
   Muestra,
-  NOMBRE,
+  TablaComparativaVista,
 } from "@/app/gestion/(panel)/resultados/Graficos";
 import type { Bloque, Seccion } from "@/lib/informe";
 
@@ -81,58 +81,12 @@ export function VistaBloque({ b }: { b: Bloque }) {
       return (
         <figure className="space-y-1">
           <figcaption className="font-bold text-[17px]">{b.titulo}</figcaption>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[34rem] text-[16px]">
-              <thead>
-                <tr className="text-left">
-                  <th
-                    scope="col"
-                    className="rotulo text-[13px] text-grafito pb-1.5 pr-3 w-[34%]"
-                  >
-                    {b.encabezado}
-                  </th>
-                  {b.estamentos.map((e) => (
-                    <th
-                      key={e}
-                      scope="col"
-                      className="rotulo text-[13px] text-grafito pb-1.5 px-2"
-                    >
-                      <span className="inline-flex items-center gap-1.5">
-                        <Muestra e={e} /> {NOMBRE[e]}
-                      </span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {b.filas.map((f, k) => (
-                  <tr key={k} className="border-t border-filete">
-                    <th
-                      scope="row"
-                      className="py-1.5 pr-3 text-left font-normal"
-                    >
-                      {f.texto}
-                    </th>
-                    {b.estamentos.map((e) => (
-                      <td key={e} className="py-1.5 px-2">
-                        {f.pct[e] == null ? (
-                          <span className="text-[15px] text-gris-texto">
-                            Menos de 5
-                          </span>
-                        ) : (
-                          <Barra
-                            valor={f.pct[e]!}
-                            e={e}
-                            etiqueta={`${NOMBRE[e]} · ${f.texto}: ${Math.round(f.pct[e]!)}%`}
-                          />
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <TablaComparativaVista
+            filas={b.filas}
+            estamentos={b.estamentos}
+            encabezado={b.encabezado}
+            pocos={b.pocos}
+          />
           <Origen texto={b.origen} />
         </figure>
       );
