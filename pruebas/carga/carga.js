@@ -38,7 +38,7 @@ function uuid() {
 }
 
 export default function () {
-  const i = exec.scenario.iterationInTest;
+  const i = Number(__ENV.OFFSET || 0) + exec.scenario.iterationInTest;
   const cred = credenciales[i];
   if (!cred) {
     exec.test.abort(`Faltan credenciales: se necesitan ${N}`);

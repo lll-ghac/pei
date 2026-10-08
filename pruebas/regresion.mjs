@@ -81,8 +81,6 @@ async function responder(p) {
     pantallas++;
     const radios = p.locator("[role=radio]");
     const checks = p.locator("[role=checkbox]");
-    // Las frases de escala muestran «Frase N de M» y avanzan solas al elegir.
-    const enEscala = /frase \d+ de \d+/i.test(await p.locator("main").innerText());
     if (await checks.count()) {
       const texto = await p.locator("main").innerText();
       const n = Number(texto.match(/exactamente (\d)/i)?.[1] ?? 1);
@@ -99,11 +97,6 @@ async function responder(p) {
         if (NO_ELEGIR.test((await r.innerText()).replace(/^\d+\s*/, "").trim())) continue;
         await r.click();
         break;
-      }
-      if (enEscala) {
-        // Las frases de escala avanzan solas al elegir.
-        await p.waitForTimeout(450);
-        continue;
       }
     }
     await p.getByRole("button", { name: /^(Siguiente|Volver al resumen)$/ }).click();

@@ -266,7 +266,7 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
           minutos={minutosRestantes}
           avance={avance}
           compacto={paso.tipo === "item"}
-          frase={paso.tipo === "item" ? `Frase ${paso.n} de ${paso.total}` : undefined}
+          frase={MOSTRAR_CONTADOR_FRASES && paso.tipo === "item" ? `Frase ${paso.n} de ${paso.total}` : undefined}
         />
       )}
 
@@ -311,8 +311,9 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
             onElegir={(v) => {
               const actual = respuestas[paso.pregunta.codigo]?.items ?? {};
               actualizar(paso.pregunta.codigo, { items: { ...actual, [paso.item.codigo]: v } });
-              // Avanza solo a la siguiente frase, después de ver la raya.
-              window.setTimeout(() => setIndice((i) => (i === indice ? i + 1 : i)), 320);
+              // Sin avance automático (piloto 8/10): marcar solo marca; se avanza con «Siguiente».
+              // Así un toque por error en el celular se ve y se corrige en la misma pantalla.
+              setError(null);
             }}
           />
         )}
@@ -390,6 +391,13 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
     </div>
   );
 }
+
+/**
+ * Contador «Frase 3 de 14» junto a «Pregunta 7 de 21». Oculto por decisión de Ger (piloto 8/10):
+ * dos contadores en la misma línea confundían. Se puede volver a mostrar cambiando este valor.
+ * Los lectores de pantalla siguen oyendo «Frase N de M» en el título de cada frase.
+ */
+const MOSTRAR_CONTADOR_FRASES = false;
 
 /** Estado del recorrido: número de pregunta, minutos y la franja de etapas por sección. */
 function Avance({
