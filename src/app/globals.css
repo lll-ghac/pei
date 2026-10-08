@@ -237,13 +237,6 @@ a {
   }
 }
 
-/* Pantallas muy bajas (iPhone SE con las barras de Safari): en las frases de escala, las opciones primero. */
-@media (max-height: 600px) {
-  body:has([data-compacto]) .franja-prueba {
-    display: none;
-  }
-}
-
 /* Impresión (manual de profesores jefes): A4, fondo blanco y colores exactos. */
 @media print {
   @page {

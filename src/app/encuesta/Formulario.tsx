@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Smiley, SmileyMeh, SmileySad, SpeakerHigh } from "@phosphor-icons/react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Smiley,
+  SmileyMeh,
+  SmileySad,
+  SpeakerHigh,
+} from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -17,7 +24,6 @@ import {
   preguntasDe,
   validarPregunta,
   type Estamento,
-  type ItemEscala,
   type Opcion,
   type Pregunta,
   type Respuestas,
@@ -27,7 +33,6 @@ import {
 type Paso =
   | { tipo: "intro" }
   | { tipo: "pregunta"; pregunta: Pregunta; seccion: string }
-  | { tipo: "item"; pregunta: Pregunta & { tipo: "escala" }; item: ItemEscala; grupo?: string; n: number; total: number; seccion: string }
   | { tipo: "confirmar" };
 
 type Props = {
@@ -60,16 +65,9 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
   const pasos = useMemo<Paso[]>(() => {
     const lista: Paso[] = [{ tipo: "intro" }];
     for (const s of encuesta.secciones) {
-      for (const p of s.preguntas) {
-        if (p.tipo === "escala") {
-          const items = p.grupos.flatMap((g) => g.items.map((item) => ({ item, grupo: g.titulo })));
-          items.forEach(({ item, grupo }, i) =>
-            lista.push({ tipo: "item", pregunta: p, item, grupo, n: i + 1, total: items.length, seccion: s.titulo }),
-          );
-        } else {
-          lista.push({ tipo: "pregunta", pregunta: p, seccion: s.titulo });
-        }
-      }
+      // Una pregunta, una pantalla (como en la encuesta en papel): las escalas muestran todas sus frases juntas.
+      for (const p of s.preguntas)
+        lista.push({ tipo: "pregunta", pregunta: p, seccion: s.titulo });
     }
     lista.push({ tipo: "confirmar" });
     return lista;
@@ -96,8 +94,14 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
   }, [indice]);
 
   // Un aviso de error siempre queda a la vista (en celular, la barra inferior lo taparía).
+  // En una escala se baja a la primera frase sin responder, que queda marcada.
   useEffect(() => {
-    if (error) avisoError.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    if (!error) return;
+    const falta = document.querySelector("[data-falta]");
+    (falta ?? avisoError.current)?.scrollIntoView({
+      block: "start",
+      behavior: "smooth",
+    });
   }, [error]);
 
   function actualizar(codigo: string, valor: ValorRespuesta) {
@@ -109,7 +113,8 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
       for (const p of preguntasDe(encuesta)) {
         if (p.tipo === "masImportante" && p.de === codigo) {
           const elegida = nuevo[p.codigo]?.codigos?.[0];
-          if (elegida && !valor.codigos?.includes(elegida)) delete nuevo[p.codigo];
+          if (elegida && !valor.codigos?.includes(elegida))
+            delete nuevo[p.codigo];
         }
       }
       return nuevo;
@@ -117,15 +122,21 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
   }
 
   function validarPaso(p: Paso): string | null {
-    if (p.tipo === "pregunta") return validarPregunta(p.pregunta, respuestas[p.pregunta.codigo], respuestas, encuesta);
-    if (p.tipo === "item") {
-      return respuestas[p.pregunta.codigo]?.items?.[p.item.codigo]
-        ? null
-        : esEstudiante
-          ? "Elige una opción para seguir."
-          : "Elija una opción para seguir.";
+    if (p.tipo !== "pregunta") return null;
+    if (p.pregunta.tipo === "escala") {
+      const items = respuestas[p.pregunta.codigo]?.items ?? {};
+      const faltan = p.pregunta.grupos
+        .flatMap((g) => g.items)
+        .filter((it) => !items[it.codigo]).length;
+      if (faltan > 0)
+        return `${faltan === 1 ? "Falta 1 frase" : `Faltan ${faltan} frases`}: están marcadas en rojo.`;
     }
-    return null;
+    return validarPregunta(
+      p.pregunta,
+      respuestas[p.pregunta.codigo],
+      respuestas,
+      encuesta,
+    );
   }
 
   function siguiente() {
@@ -145,7 +156,9 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
 
   /** Desde el resumen: ir a una pregunta para cambiarla. */
   function irAPregunta(codigo: string) {
-    const i = pasos.findIndex((s) => (s.tipo === "pregunta" || s.tipo === "item") && s.pregunta.codigo === codigo);
+    const i = pasos.findIndex(
+      (s) => s.tipo === "pregunta" && s.pregunta.codigo === codigo,
+    );
     if (i < 0) return;
     setError(null);
     setDesdeResumen(true);
@@ -195,12 +208,16 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
           envioId.current ??=
             typeof crypto.randomUUID === "function"
               ? crypto.randomUUID()
-              : Array.from(crypto.getRandomValues(new Uint8Array(16)), (x) => x.toString(16).padStart(2, "0")).join("");
+              : Array.from(crypto.getRandomValues(new Uint8Array(16)), (x) =>
+                  x.toString(16).padStart(2, "0"),
+                ).join("");
           const r = await enviarEncuesta(respuestas, envioId.current);
           if (r.ok) {
             enviado.current = true;
             setRespuestas({});
-            router.replace(`/gracias?e=${estamento}${r.yaRecibida ? "&ya=1" : ""}`);
+            router.replace(
+              `/gracias?e=${estamento}${r.yaRecibida ? "&ya=1" : ""}`,
+            );
           } else {
             setDoblando(false);
             setError(r.error);
@@ -219,27 +236,46 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
   }
 
   const numeroPregunta =
-    paso.tipo === "pregunta" || paso.tipo === "item"
-      ? preguntasDe(encuesta).findIndex((q) => q.codigo === paso.pregunta.codigo) + 1
+    paso.tipo === "pregunta"
+      ? preguntasDe(encuesta).findIndex(
+          (q) => q.codigo === paso.pregunta.codigo,
+        ) + 1
       : 0;
-  const seccionActual = paso.tipo === "pregunta" || paso.tipo === "item" ? paso.seccion : null;
+  const seccionActual = paso.tipo === "pregunta" ? paso.seccion : null;
   const avance = indice / (pasos.length - 1);
-  const minutosRestantes = Math.max(1, Math.ceil(encuesta.minutos * (1 - avance)));
+  const minutosRestantes = Math.max(
+    1,
+    Math.ceil(encuesta.minutos * (1 - avance)),
+  );
 
   if (finVistaPrevia) {
     return (
       <div className="bg-papel border-y sm:border border-filete px-5 py-8 sm:px-8 text-center">
         <Urna className="mx-auto w-40" papeletas={3} />
-        <h1 ref={titulo} tabIndex={-1} className="titulo mt-4 text-[28px] outline-none">
+        <h1
+          ref={titulo}
+          tabIndex={-1}
+          className="titulo mt-4 text-[28px] outline-none"
+        >
           {encuesta.despedida}
         </h1>
-        <p className="mt-3">Fin de la vista previa. Aquí la persona vería la pantalla de agradecimiento.</p>
+        <p className="mt-3">
+          Fin de la vista previa. Aquí la persona vería la pantalla de
+          agradecimiento.
+        </p>
         <p className="mt-1 text-gris-texto">No se guardó ninguna respuesta.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <button type="button" onClick={reiniciarVistaPrevia} className="boton boton-primario">
+          <button
+            type="button"
+            onClick={reiniciarVistaPrevia}
+            className="boton boton-primario"
+          >
             Volver a empezar
           </button>
-          <Link href="/gestion/encuestas" className="boton boton-secundario no-underline">
+          <Link
+            href="/gestion/encuestas"
+            className="boton boton-secundario no-underline"
+          >
             Volver al panel
           </Link>
         </div>
@@ -250,7 +286,10 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
   return (
     <div>
       {vistaPrevia && (
-        <p role="note" className="mx-4 sm:mx-0 mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[16px] text-timbre">
+        <p
+          role="note"
+          className="mx-4 sm:mx-0 mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[16px] text-timbre"
+        >
           <span className="sello text-[12px]">Vista previa</span>
           Nada se guarda. «Saltar» avanza sin responder.
         </p>
@@ -265,8 +304,6 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
           confirmar={paso.tipo === "confirmar"}
           minutos={minutosRestantes}
           avance={avance}
-          compacto={paso.tipo === "item"}
-          frase={MOSTRAR_CONTADOR_FRASES && paso.tipo === "item" ? `Frase ${paso.n} de ${paso.total}` : undefined}
         />
       )}
 
@@ -287,9 +324,29 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
         className={`bg-papel border-y sm:border border-filete ${doblando ? "papeleta-doblandose" : ""}`}
         aria-busy={doblando || enviando}
       >
-        {paso.tipo === "intro" && <Intro estamento={estamento} curso={curso} titulo={titulo} />}
+        {paso.tipo === "intro" && (
+          <Intro estamento={estamento} curso={curso} titulo={titulo} />
+        )}
 
-        {paso.tipo === "pregunta" && (
+        {paso.tipo === "pregunta" && paso.pregunta.tipo === "escala" && (
+          <PantallaEscala
+            key={paso.pregunta.codigo}
+            pregunta={paso.pregunta}
+            valor={respuestas[paso.pregunta.codigo]?.items ?? {}}
+            mostrarFaltas={error !== null}
+            esEstudiante={esEstudiante}
+            titulo={titulo}
+            onElegir={(item, v) => {
+              const actual = respuestas[paso.pregunta.codigo]?.items ?? {};
+              // Marcar solo marca: se avanza con «Siguiente» (piloto 8/10).
+              actualizar(paso.pregunta.codigo, {
+                items: { ...actual, [item]: v },
+              });
+            }}
+          />
+        )}
+
+        {paso.tipo === "pregunta" && paso.pregunta.tipo !== "escala" && (
           <PantallaPregunta
             key={paso.pregunta.codigo}
             pregunta={paso.pregunta}
@@ -301,29 +358,18 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
           />
         )}
 
-        {paso.tipo === "item" && (
-          <PantallaItem
-            key={`${paso.pregunta.codigo}-${paso.item.codigo}`}
-            paso={paso}
-            valor={respuestas[paso.pregunta.codigo]?.items?.[paso.item.codigo]}
-            esEstudiante={esEstudiante}
-            titulo={titulo}
-            onElegir={(v) => {
-              const actual = respuestas[paso.pregunta.codigo]?.items ?? {};
-              actualizar(paso.pregunta.codigo, { items: { ...actual, [paso.item.codigo]: v } });
-              // Sin avance automático (piloto 8/10): marcar solo marca; se avanza con «Siguiente».
-              // Así un toque por error en el celular se ve y se corrige en la misma pantalla.
-              setError(null);
-            }}
-          />
-        )}
-
         {paso.tipo === "confirmar" && (
           <div className="px-5 py-7 sm:px-8 sm:py-9">
             <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-6">
               <div className="flex-1">
-                <h1 ref={titulo} tabIndex={-1} className="titulo text-[28px] sm:text-[32px] outline-none">
-                  {esEstudiante ? "Tu papeleta está lista" : "Su papeleta está lista"}
+                <h1
+                  ref={titulo}
+                  tabIndex={-1}
+                  className="titulo text-[28px] sm:text-[32px] outline-none"
+                >
+                  {esEstudiante
+                    ? "Tu papeleta está lista"
+                    : "Su papeleta está lista"}
                 </h1>
                 <p className="mt-3">
                   {esEstudiante
@@ -336,15 +382,25 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
                     : "Revise sus respuestas abajo. Con «Cambiar» vuelve a esa pregunta."}
                 </p>
               </div>
-              <Urna className="w-36 sm:w-44 shrink-0 self-center" papeletas={2} />
+              <Urna
+                className="w-36 sm:w-44 shrink-0 self-center"
+                papeletas={2}
+              />
             </div>
-            <Resumen encuesta={encuesta} respuestas={respuestas} esEstudiante={esEstudiante} onCambiar={irAPregunta} />
-            <p className="mt-6 border-t-2 border-dashed border-grafito pt-1.5 text-[18px] text-grafito" aria-hidden>
+            <Resumen
+              encuesta={encuesta}
+              respuestas={respuestas}
+              esEstudiante={esEstudiante}
+              onCambiar={irAPregunta}
+            />
+            <p
+              className="mt-6 border-t-2 border-dashed border-grafito pt-1.5 text-[18px] text-grafito"
+              aria-hidden
+            >
               doblar aquí
             </p>
           </div>
         )}
-
       </article>
 
       <nav
@@ -352,18 +408,29 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
         aria-label="Navegación de la encuesta"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className={`flex items-center gap-2 sm:gap-3 px-4 sm:px-0 ${paso.tipo === "item" ? "py-1.5" : "py-3"}`}>
+        <div className={`flex items-center gap-2 sm:gap-3 px-4 sm:px-0 py-3`}>
           {indice > 0 && (
-            <button type="button" onClick={anterior} disabled={enviando || doblando} className="boton boton-secundario !px-3.5 shrink-0">
+            <button
+              type="button"
+              onClick={anterior}
+              disabled={enviando || doblando}
+              className="boton boton-secundario !px-3.5 shrink-0"
+            >
               <ArrowLeft size={20} weight="bold" aria-hidden />
               Anterior
             </button>
           )}
-          {vistaPrevia && paso.tipo !== "confirmar" && paso.tipo !== "intro" && (
-            <button type="button" onClick={saltar} className="ml-auto shrink-0 font-bold text-timbre underline px-1.5 min-h-12">
-              Saltar
-            </button>
-          )}
+          {vistaPrevia &&
+            paso.tipo !== "confirmar" &&
+            paso.tipo !== "intro" && (
+              <button
+                type="button"
+                onClick={saltar}
+                className="ml-auto shrink-0 font-bold text-timbre underline px-1.5 min-h-12"
+              >
+                Saltar
+              </button>
+            )}
           {paso.tipo === "confirmar" ? (
             <button
               type="button"
@@ -374,7 +441,11 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
               disabled={enviando || doblando}
               className={`boton boton-primario flex-1 min-w-0 sm:flex-none ${vistaPrevia ? "" : "ml-auto"}`}
             >
-              {enviando || doblando ? "Depositando…" : vistaPrevia ? "Depositar (prueba)" : "Depositar en la urna"}
+              {enviando || doblando
+                ? "Depositando…"
+                : vistaPrevia
+                  ? "Depositar (prueba)"
+                  : "Depositar en la urna"}
             </button>
           ) : (
             <button
@@ -382,7 +453,11 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
               onClick={siguiente}
               className={`boton boton-primario flex-1 min-w-0 sm:flex-none sm:min-w-44 ${vistaPrevia ? "" : "ml-auto"}`}
             >
-              {paso.tipo === "intro" ? "Comenzar" : desdeResumen ? "Volver al resumen" : "Siguiente"}
+              {paso.tipo === "intro"
+                ? "Comenzar"
+                : desdeResumen
+                  ? "Volver al resumen"
+                  : "Siguiente"}
               <ArrowRight size={20} weight="bold" aria-hidden />
             </button>
           )}
@@ -391,13 +466,6 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
     </div>
   );
 }
-
-/**
- * Contador «Frase 3 de 14» junto a «Pregunta 7 de 21». Oculto por decisión de Ger (piloto 8/10):
- * dos contadores en la misma línea confundían. Se puede volver a mostrar cambiando este valor.
- * Los lectores de pantalla siguen oyendo «Frase N de M» en el título de cada frase.
- */
-const MOSTRAR_CONTADOR_FRASES = false;
 
 /** Estado del recorrido: número de pregunta, minutos y la franja de etapas por sección. */
 function Avance({
@@ -408,8 +476,6 @@ function Avance({
   confirmar,
   minutos,
   avance,
-  compacto,
-  frase,
 }: {
   encuestaSecciones: string[];
   seccionActual: string | null;
@@ -418,26 +484,27 @@ function Avance({
   confirmar: boolean;
   minutos: number;
   avance: number;
-  /** En las frases de una escala: sin minutos ni nombre de sección, para que quepan todas las opciones. */
-  compacto?: boolean;
-  /** «Frase 3 de 14», en la misma línea del número de pregunta. */
-  frase?: string;
 }) {
-  const actual = confirmar ? encuestaSecciones.length : encuestaSecciones.indexOf(seccionActual ?? "");
+  const actual = confirmar
+    ? encuestaSecciones.length
+    : encuestaSecciones.indexOf(seccionActual ?? "");
   return (
-    <div className={`px-4 sm:px-0 ${compacto ? "mb-2" : "mb-3"}`} data-compacto={compacto ? "" : undefined}>
+    <div className="px-4 sm:px-0 mb-3">
       <div className="flex items-baseline justify-between gap-3">
         <p className="rotulo text-[17px] text-tinta">
           {confirmar ? "Última página" : `Pregunta ${numero} de ${total}`}
-          {frase && <span className="text-timbre"> · {frase}</span>}
         </p>
         {!confirmar && (
-          <p className={`text-[18px] text-gris-texto ${compacto ? "hidden sm:block" : ""}`}>Quedan unos {minutos} min</p>
+          <p className="text-[18px] text-gris-texto">
+            Quedan unos {minutos} min
+          </p>
         )}
       </div>
       <ol
-        className={`mt-2 grid gap-1 ${compacto ? "[@media(max-height:680px)]:hidden" : ""}`}
-        style={{ gridTemplateColumns: `repeat(${encuestaSecciones.length}, minmax(0, 1fr))` }}
+        className="mt-2 grid gap-1"
+        style={{
+          gridTemplateColumns: `repeat(${encuestaSecciones.length}, minmax(0, 1fr))`,
+        }}
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
@@ -458,7 +525,11 @@ function Avance({
           </li>
         ))}
       </ol>
-      {seccionActual && !compacto && <p className="mt-1 sm:hidden text-[18px] text-grafito">{seccionActual}</p>}
+      {seccionActual && (
+        <p className="mt-1 sm:hidden text-[18px] text-grafito">
+          {seccionActual}
+        </p>
+      )}
     </div>
   );
 }
@@ -475,11 +546,23 @@ function Intro({
   const encuesta = ENCUESTAS[estamento];
   const tu = estamento === "E";
   const pasos = tu
-    ? ["Lee cada pregunta y marca tu respuesta.", "Puedes volver atrás y cambiarla antes de terminar.", "Al final, tu papeleta se dobla y cae en la urna."]
-    : ["Lea cada pregunta y marque su respuesta.", "Puede volver atrás y cambiarla antes de terminar.", "Al final, su papeleta se dobla y cae en la urna."];
+    ? [
+        "Lee cada pregunta y marca tu respuesta.",
+        "Puedes volver atrás y cambiarla antes de terminar.",
+        "Al final, tu papeleta se dobla y cae en la urna.",
+      ]
+    : [
+        "Lea cada pregunta y marque su respuesta.",
+        "Puede volver atrás y cambiarla antes de terminar.",
+        "Al final, su papeleta se dobla y cae en la urna.",
+      ];
   return (
     <div className="px-5 py-7 sm:px-8 sm:py-9">
-      <h1 ref={titulo} tabIndex={-1} className="titulo text-[30px] sm:text-[36px] outline-none">
+      <h1
+        ref={titulo}
+        tabIndex={-1}
+        className="titulo text-[30px] sm:text-[36px] outline-none"
+      >
         Diseñando el futuro de nuestra escuela
       </h1>
       <p className="mt-2 text-grafito">
@@ -492,14 +575,22 @@ function Intro({
         ))}
       </div>
 
-      <section className="mt-7 border border-grafito" aria-labelledby="como-responder">
-        <h2 id="como-responder" className="rotulo text-[15px] bg-tinta text-papel px-4 py-2">
+      <section
+        className="mt-7 border border-grafito"
+        aria-labelledby="como-responder"
+      >
+        <h2
+          id="como-responder"
+          className="rotulo text-[15px] bg-tinta text-papel px-4 py-2"
+        >
           {tu ? "Cómo se responde" : "Cómo se responde"}
         </h2>
         <ol className="divide-y divide-filete">
           {pasos.map((t, i) => (
             <li key={t} className="flex gap-4 px-4 py-3">
-              <span className="rotulo text-[20px] text-timbre w-5 shrink-0">{i + 1}</span>
+              <span className="rotulo text-[20px] text-timbre w-5 shrink-0">
+                {i + 1}
+              </span>
               <span>{t}</span>
             </li>
           ))}
@@ -507,26 +598,39 @@ function Intro({
       </section>
 
       <div className="mt-6 flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-5">
-        <span className="sello text-timbre text-[15px] self-start shrink-0">Voto secreto</span>
+        <span className="sello text-timbre text-[15px] self-start shrink-0">
+          Voto secreto
+        </span>
         <div className="text-[18px] text-grafito">
           {tu ? (
             <p>
-              Tus respuestas son secretas. Tu profesor, la dirección ni nadie podrá saber qué marcaste. Solo se
-              verán los resultados de todo el curso juntos. No es una prueba y no tiene nota.
+              Tus respuestas son secretas. Tu profesor, la dirección ni nadie
+              podrá saber qué marcaste. Solo se verán los resultados de todo el
+              curso juntos. No es una prueba y no tiene nota.
             </p>
           ) : (
             <p>
-              La encuesta es anónima. Su credencial se entregó al azar y nadie sabe cuál recibió. El sistema
-              registra que esta credencial ya participó, pero guarda sus respuestas por separado, sin ningún
-              vínculo con ella. Nadie, ni la dirección ni la comisión, puede saber qué respondió usted. Los
-              resultados se muestran solo en grupos de 5 o más personas.
+              La encuesta es anónima. Su credencial se entregó al azar y nadie
+              sabe cuál recibió. El sistema registra que esta credencial ya
+              participó, pero guarda sus respuestas por separado, sin ningún
+              vínculo con ella. Nadie, ni la dirección ni la comisión, puede
+              saber qué respondió usted. Los resultados se muestran solo en
+              grupos de 5 o más personas.
             </p>
           )}
           <p className="mt-2 flex flex-wrap gap-x-4">
-            <a href="/anonimato" target="_blank" className="text-timbre underline font-bold">
+            <a
+              href="/anonimato"
+              target="_blank"
+              className="text-timbre underline font-bold"
+            >
               Cómo protegemos el anonimato
             </a>
-            <a href="/privacidad" target="_blank" className="text-timbre underline font-bold">
+            <a
+              href="/privacidad"
+              target="_blank"
+              className="text-timbre underline font-bold"
+            >
               Privacidad
             </a>
           </p>
@@ -543,7 +647,11 @@ function LeerEnVozAlta({ texto }: { texto: string }) {
     if (!synth) return;
     const buscar = () => {
       const voces = synth.getVoices();
-      setVoz(voces.find((v) => v.lang === "es-CL") ?? voces.find((v) => v.lang.startsWith("es")) ?? null);
+      setVoz(
+        voces.find((v) => v.lang === "es-CL") ??
+          voces.find((v) => v.lang.startsWith("es")) ??
+          null,
+      );
     };
     buscar();
     synth.addEventListener("voiceschanged", buscar);
@@ -587,16 +695,27 @@ function Encabezado({
     <div className="px-5 pt-6 pb-5 sm:px-8 sm:pt-8">
       {pregunta.cita && (
         <figure className="mb-5 border border-filete bg-fondo/60 px-4 py-3">
-          <figcaption className="text-[18px] text-grafito">{pregunta.cita.antes}</figcaption>
-          <blockquote className="mt-1 text-[18px] italic">«{pregunta.cita.texto}»</blockquote>
+          <figcaption className="text-[18px] text-grafito">
+            {pregunta.cita.antes}
+          </figcaption>
+          <blockquote className="mt-1 text-[18px] italic">
+            «{pregunta.cita.texto}»
+          </blockquote>
         </figure>
       )}
       {/* Columna del número a 3rem: caben los números de dos dígitos (10 a 21) sin pegarse al texto. */}
       <div className="grid grid-cols-[3rem_1fr_auto] items-start gap-x-3">
-        <span className="rotulo text-[32px] leading-none text-timbre pt-0.5" aria-hidden>
+        <span
+          className="rotulo text-[32px] leading-none text-timbre pt-0.5"
+          aria-hidden
+        >
           {pregunta.numero}
         </span>
-        <h1 ref={titulo} tabIndex={-1} className="titulo text-[24px] sm:text-[28px] outline-none">
+        <h1
+          ref={titulo}
+          tabIndex={-1}
+          className="titulo text-[24px] sm:text-[28px] outline-none"
+        >
           <span className="sr-only">Pregunta {pregunta.numero}. </span>
           {pregunta.texto}
         </h1>
@@ -604,7 +723,9 @@ function Encabezado({
         {(pregunta.indicacion || extra) && (
           <p className="col-start-2 col-span-2 mt-2 text-[18px] text-grafito">
             {pregunta.indicacion}
-            {pregunta.indicacion && extra && <span className="text-filete"> · </span>}
+            {pregunta.indicacion && extra && (
+              <span className="text-filete"> · </span>
+            )}
             {extra && <strong className="text-tinta">{extra}</strong>}
           </p>
         )}
@@ -684,10 +805,17 @@ function Fila({
         activa ? "bg-verde-claro" : "bg-papel hover:bg-fondo/70"
       }`}
     >
-      <span className={`rotulo text-[18px] ${icono ? "text-timbre" : activa ? "text-tinta" : "text-gris-texto"}`} aria-hidden>
+      <span
+        className={`rotulo text-[18px] ${icono ? "text-timbre" : activa ? "text-tinta" : "text-gris-texto"}`}
+        aria-hidden
+      >
         {icono ?? numero}
       </span>
-      <span className={`${activa ? "font-bold" : ""} ${tenue && !activa ? "text-grafito" : ""}`}>{texto}</span>
+      <span
+        className={`${activa ? "font-bold" : ""} ${tenue && !activa ? "text-grafito" : ""}`}
+      >
+        {texto}
+      </span>
       <Marca activa={activa} multiple={multiple} />
     </button>
   );
@@ -719,7 +847,11 @@ function PantallaPregunta({
     const texto = valor?.texto ?? "";
     return (
       <div>
-        <Encabezado pregunta={pregunta} titulo={titulo} lectura={pregunta.texto} />
+        <Encabezado
+          pregunta={pregunta}
+          titulo={titulo}
+          lectura={pregunta.texto}
+        />
         <div className="px-5 pb-7 sm:px-8">
           <p className="text-[18px] text-grafito">
             {esEstudiante
@@ -734,7 +866,8 @@ function PantallaPregunta({
             aria-label={pregunta.texto}
             className="campo mt-3 text-[19px] leading-relaxed"
             style={{
-              backgroundImage: "linear-gradient(transparent calc(1.625em - 1px), var(--color-filete) 1px)",
+              backgroundImage:
+                "linear-gradient(transparent calc(1.625em - 1px), var(--color-filete) 1px)",
               backgroundSize: "100% 1.625em",
               backgroundAttachment: "local",
             }}
@@ -749,7 +882,12 @@ function PantallaPregunta({
 
   const elegidos = valor?.codigos ?? [];
   const multiple = pregunta.tipo === "multiple" || pregunta.tipo === "exacta";
-  const limite = pregunta.tipo === "multiple" ? pregunta.max : pregunta.tipo === "exacta" ? pregunta.n : 1;
+  const limite =
+    pregunta.tipo === "multiple"
+      ? pregunta.max
+      : pregunta.tipo === "exacta"
+        ? pregunta.n
+        : 1;
   const extra =
     pregunta.tipo === "exacta"
       ? `${esEstudiante ? "Llevas" : "Lleva"} ${elegidos.length} de ${pregunta.n}`
@@ -760,7 +898,10 @@ function PantallaPregunta({
   function alternar(codigo: string) {
     setAviso(null);
     if (!multiple) {
-      onCambio({ codigos: [codigo], texto: codigo === OTRA ? valor?.texto : undefined });
+      onCambio({
+        codigos: [codigo],
+        texto: codigo === OTRA ? valor?.texto : undefined,
+      });
       return;
     }
     let nuevos: string[];
@@ -779,19 +920,31 @@ function PantallaPregunta({
         return;
       }
     }
-    onCambio({ codigos: nuevos, texto: nuevos.includes(OTRA) ? valor?.texto : undefined });
+    onCambio({
+      codigos: nuevos,
+      texto: nuevos.includes(OTRA) ? valor?.texto : undefined,
+    });
   }
 
   return (
     <div>
-      <Encabezado pregunta={pregunta} extra={extra} titulo={titulo} lectura={lectura} />
+      <Encabezado
+        pregunta={pregunta}
+        extra={extra}
+        titulo={titulo}
+        lectura={lectura}
+      />
       {pregunta.tipo === "masImportante" && opciones.length === 0 && (
         <p className="mx-5 sm:mx-8 mb-5 border border-filete bg-ocre-claro px-4 py-3 text-[18px]">
-          Aquí aparecen solo las 3 prioridades marcadas en la pregunta anterior. Vuelva atrás y marque 3 para ver las
-          opciones.
+          Aquí aparecen solo las 3 prioridades marcadas en la pregunta anterior.
+          Vuelva atrás y marque 3 para ver las opciones.
         </p>
       )}
-      <div className="border-t border-filete divide-y divide-filete" role={multiple ? "group" : "radiogroup"} aria-label={pregunta.texto}>
+      <div
+        className="border-t border-filete divide-y divide-filete"
+        role={multiple ? "group" : "radiogroup"}
+        aria-label={pregunta.texto}
+      >
         {opciones.map((o, i) => {
           const sinNumero = opciones.some((x) => /^\d/.test(x.texto));
           const activa = elegidos.includes(o.codigo);
@@ -812,7 +965,9 @@ function PantallaPregunta({
                     autoFocus
                     value={valor?.texto ?? ""}
                     maxLength={MAX_TEXTO}
-                    onChange={(e) => onCambio({ codigos: elegidos, texto: e.target.value })}
+                    onChange={(e) =>
+                      onCambio({ codigos: elegidos, texto: e.target.value })
+                    }
                     placeholder={esEstudiante ? "Escribe cuál" : "Escriba cuál"}
                     aria-label={`${o.texto}: escriba cuál`}
                     className="campo"
@@ -827,11 +982,17 @@ function PantallaPregunta({
       <p
         role="status"
         aria-live="polite"
-        className={aviso ? "sticky bottom-[4.75rem] z-20 sm:static flex items-center gap-3 bg-tinta text-papel px-5 sm:px-8 py-3 text-[18px] font-bold" : "sr-only"}
+        className={
+          aviso
+            ? "sticky bottom-[4.75rem] z-20 sm:static flex items-center gap-3 bg-tinta text-papel px-5 sm:px-8 py-3 text-[18px] font-bold"
+            : "sr-only"
+        }
       >
         {aviso && (
           <>
-            <span className="sello text-[12px] text-papel shrink-0">Máximo</span>
+            <span className="sello text-[12px] text-papel shrink-0">
+              Máximo
+            </span>
             {aviso}
           </>
         )}
@@ -842,57 +1003,117 @@ function PantallaPregunta({
 
 const CARITAS = [SmileySad, SmileyMeh, Smiley, Smiley];
 
-function PantallaItem({
-  paso,
+/**
+ * Escala completa en una pantalla, como la tabla del papel («marque una opción por fila»): cada frase con
+ * sus opciones debajo. Si falta alguna al tocar «Siguiente», queda marcada en rojo.
+ */
+function PantallaEscala({
+  pregunta,
   valor,
+  mostrarFaltas,
   esEstudiante,
   titulo,
   onElegir,
 }: {
-  paso: Extract<Paso, { tipo: "item" }>;
-  valor: string | undefined;
+  pregunta: Pregunta & { tipo: "escala" };
+  valor: Record<string, string>;
+  mostrarFaltas: boolean;
   esEstudiante: boolean;
   titulo: React.RefObject<HTMLHeadingElement | null>;
-  onElegir: (v: string) => void;
+  onElegir: (item: string, v: string) => void;
 }) {
-  const escala = ESCALAS[paso.pregunta.escala];
-  const conCaritas = esEstudiante && paso.pregunta.escala === "FRE";
-  const lectura = [paso.item.texto, ...escala.map((o) => o.texto)].join(". ");
+  const escala = ESCALAS[pregunta.escala];
+  const conCaritas = esEstudiante && pregunta.escala === "FRE";
+  const lecturaPregunta = `${pregunta.texto}. Opciones: ${escala.map((o) => o.texto).join(", ")}.`;
   return (
     <div>
-      {/* Pregunta en una línea menor; la frase es el título, para que las opciones quepan sin bajar. */}
-      {/* En pantallas muy bajas (iPhone SE con las barras de Safari) la pregunta queda solo para lectores de pantalla. */}
-      <p className="px-5 sm:px-8 pt-3 pb-2.5 text-[18px] font-bold text-grafito leading-snug [@media(max-height:600px)]:sr-only">
-        <span className="rotulo text-timbre mr-2">{paso.pregunta.numero}</span>
-        {paso.pregunta.texto}
-        {paso.grupo && <span className="hidden sm:inline font-normal"> · {paso.grupo}</span>}
-      </p>
-      <div className="mx-5 sm:mx-8 mb-2.5 border border-grafito pl-4 pr-2 py-2 flex items-start gap-2 [@media(max-height:600px)]:mt-2">
-        <h1 ref={titulo} tabIndex={-1} className="flex-1 text-[21px] font-bold leading-snug outline-none">
-          «{paso.item.texto}»<span className="sr-only">. Frase {paso.n} de {paso.total}.</span>
-        </h1>
-        <LeerEnVozAlta texto={lectura} />
-      </div>
-      <div className="border-t border-filete divide-y divide-filete" role="radiogroup" aria-label={paso.item.texto}>
-        {escala.map((o, i) => {
-          const Carita = CARITAS[i];
-          return (
-            <Fila
-              key={o.codigo}
-              numero={String(i + 1)}
-              // Todas las caritas iguales de peso: ninguna opción se ve destacada antes de elegir.
-              // Solo la elegida se rellena, como marca de lo que se respondió.
-              icono={conCaritas ? <Carita size={34} weight={valor === o.codigo ? "fill" : "regular"} /> : undefined}
-              texto={o.texto}
-              activa={valor === o.codigo}
-              multiple={false}
-              tenue={o.codigo === "98"}
-              compacta
-              onClick={() => onElegir(o.codigo)}
-            />
-          );
-        })}
-      </div>
+      <Encabezado
+        pregunta={pregunta}
+        titulo={titulo}
+        lectura={lecturaPregunta}
+      />
+      {pregunta.grupos.map((g, gi) => (
+        <section key={gi} aria-label={g.titulo ?? pregunta.texto}>
+          {g.titulo && (
+            <h2 className="rotulo text-[17px] text-timbre px-5 sm:px-8 pt-5 pb-2 border-t-2 border-tinta">
+              {g.titulo}
+            </h2>
+          )}
+          <ol>
+            {g.items.map((it, i) => {
+              const elegido = valor[it.codigo];
+              const falta = mostrarFaltas && !elegido;
+              const id = `frase-${pregunta.codigo}-${it.codigo}`;
+              return (
+                <li
+                  key={it.codigo}
+                  data-falta={falta ? "" : undefined}
+                  className={`border-t border-filete scroll-mt-4 ${falta ? "bg-lacre-claro shadow-[inset_4px_0_0_var(--color-lacre)]" : ""}`}
+                >
+                  <div className="flex items-start gap-3 px-5 sm:px-8 pt-4 pb-2.5">
+                    <span
+                      className="rotulo text-[18px] text-timbre pt-0.5 w-6 shrink-0"
+                      aria-hidden
+                    >
+                      {i + 1}
+                    </span>
+                    <p
+                      id={id}
+                      className="flex-1 text-[20px] font-bold leading-snug"
+                    >
+                      «{it.texto}»
+                      {falta && (
+                        <span className="sello text-lacre text-[12px] ml-2 align-middle">
+                          Falta
+                        </span>
+                      )}
+                    </p>
+                    {esEstudiante && (
+                      <LeerEnVozAlta
+                        texto={[it.texto, ...escala.map((o) => o.texto)].join(
+                          ". ",
+                        )}
+                      />
+                    )}
+                  </div>
+                  <div
+                    className="divide-y divide-filete border-t border-filete"
+                    role="radiogroup"
+                    aria-labelledby={id}
+                  >
+                    {escala.map((o, k) => {
+                      const Carita = CARITAS[k];
+                      return (
+                        <Fila
+                          key={o.codigo}
+                          numero={String(k + 1)}
+                          // Todas las caritas iguales de peso: solo la elegida se rellena.
+                          icono={
+                            conCaritas ? (
+                              <Carita
+                                size={30}
+                                weight={
+                                  elegido === o.codigo ? "fill" : "regular"
+                                }
+                              />
+                            ) : undefined
+                          }
+                          texto={o.texto}
+                          activa={elegido === o.codigo}
+                          multiple={false}
+                          tenue={o.codigo === "98"}
+                          compacta
+                          onClick={() => onElegir(it.codigo, o.codigo)}
+                        />
+                      );
+                    })}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ))}
     </div>
   );
 }
@@ -911,7 +1132,8 @@ function Resumen({
 }) {
   function textoDe(p: Pregunta): string {
     const v = respuestas[p.codigo];
-    if (p.tipo === "abierta") return v?.texto ? v.texto : "Sin respuesta (es opcional)";
+    if (p.tipo === "abierta")
+      return v?.texto ? v.texto : "Sin respuesta (es opcional)";
     if (p.tipo === "escala") {
       const total = p.grupos.reduce((n, g) => n + g.items.length, 0);
       const hechas = Object.keys(v?.items ?? {}).length;
@@ -926,7 +1148,10 @@ function Resumen({
     return elegidas.length ? elegidas.join(" · ") : "Sin responder";
   }
   return (
-    <section className="mt-7 border-t border-tinta" aria-labelledby="titulo-resumen">
+    <section
+      className="mt-7 border-t border-tinta"
+      aria-labelledby="titulo-resumen"
+    >
       <h2 id="titulo-resumen" className="rotulo text-[17px] pt-3 pb-2">
         {esEstudiante ? "Tus respuestas" : "Sus respuestas"}
       </h2>
@@ -935,25 +1160,43 @@ function Resumen({
           const v = respuestas[p.codigo];
           const sinResponder = p.tipo !== "abierta" && !v;
           return (
-            <li key={p.codigo} className="grid grid-cols-[2.25rem_1fr_auto] items-start gap-x-3 py-3">
-              <span className="rotulo text-[18px] text-timbre pt-0.5">{p.numero}</span>
+            <li
+              key={p.codigo}
+              className="grid grid-cols-[2.25rem_1fr_auto] items-start gap-x-3 py-3"
+            >
+              <span className="rotulo text-[18px] text-timbre pt-0.5">
+                {p.numero}
+              </span>
               <div className="min-w-0">
-                <p className="text-[18px] text-grafito leading-snug">{p.texto}</p>
-                <p className={`mt-0.5 text-[18px] leading-snug break-words ${sinResponder ? "text-lacre font-bold" : "font-bold"}`}>
+                <p className="text-[18px] text-grafito leading-snug">
+                  {p.texto}
+                </p>
+                <p
+                  className={`mt-0.5 text-[18px] leading-snug break-words ${sinResponder ? "text-lacre font-bold" : "font-bold"}`}
+                >
                   {textoDe(p)}
                 </p>
                 {p.tipo === "escala" && v?.items && (
                   <details className="mt-1">
-                    <summary className="cursor-pointer text-[18px] text-timbre underline">Ver frases</summary>
+                    <summary className="cursor-pointer text-[18px] text-timbre underline">
+                      Ver frases
+                    </summary>
                     <ul className="mt-1 space-y-0.5">
-                      {p.grupos.flatMap((g) => g.items).map((it) => (
-                        <li key={it.codigo} className="text-[18px] text-grafito">
-                          «{it.texto}»:{" "}
-                          <strong className="text-tinta">
-                            {ESCALAS[p.escala].find((o) => o.codigo === v.items?.[it.codigo])?.texto ?? "sin responder"}
-                          </strong>
-                        </li>
-                      ))}
+                      {p.grupos
+                        .flatMap((g) => g.items)
+                        .map((it) => (
+                          <li
+                            key={it.codigo}
+                            className="text-[18px] text-grafito"
+                          >
+                            «{it.texto}»:{" "}
+                            <strong className="text-tinta">
+                              {ESCALAS[p.escala].find(
+                                (o) => o.codigo === v.items?.[it.codigo],
+                              )?.texto ?? "sin responder"}
+                            </strong>
+                          </li>
+                        ))}
                     </ul>
                   </details>
                 )}
