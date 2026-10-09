@@ -463,7 +463,12 @@ export async function universo(): Promise<
   const sumar = (k: "apoderados" | "estudiantes") =>
     av.filas.reduce((t, f) => t + (f[k]?.base ?? 0), 0);
   return {
-    A: { base: sumar("apoderados"), texto: "papeletas de apoderados" },
+    A: {
+      base: sumar("apoderados"),
+      texto: av.filas.some((f) => f.apoderados.estimada)
+        ? "apoderados según matrícula (aún no se registran todas las papeletas)"
+        : "papeletas de apoderados entregadas",
+    },
     E: { base: sumar("estudiantes"), texto: "estudiantes de 5° a 8°" },
     F: { base: av.funcionarios.base, texto: "funcionarios" },
   };

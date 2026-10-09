@@ -7,6 +7,12 @@ import { avance } from "@/lib/gestion";
 export const metadata = { title: "Avance de la encuesta PEI 2027" };
 
 /** Pantalla pública de avance: solo números por curso y estamento. */
+const hora = new Intl.DateTimeFormat("es-CL", {
+  timeZone: "America/Santiago",
+  dateStyle: "long",
+  timeStyle: "short",
+});
+
 export default async function Avance() {
   const { estado, filas, funcionarios } = await avance();
   return (
@@ -16,7 +22,8 @@ export default async function Avance() {
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-7">
         <h1 className="titulo text-[30px]">¿Cuántos hemos respondido?</h1>
         <p className="mt-1 mb-5 text-gris-texto">
-          Se actualiza sola cada 30 segundos. Aquí no se muestra ninguna respuesta.
+          Se actualiza sola cada 30 segundos (última vez:{" "}
+          {hora.format(new Date())}). Aquí no se muestra ninguna respuesta.
         </p>
         <TablaAvance filas={filas} funcionarios={funcionarios} />
         <AutoRefresco segundos={30} />

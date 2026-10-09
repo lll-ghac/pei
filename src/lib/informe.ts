@@ -361,7 +361,9 @@ export async function armarInforme(opciones: {
       {
         etiqueta: "Apoderados",
         valor: String(n.A),
-        detalle: `${tasa(n.A, partA.base)} de ${partA.base} papeletas entregadas`,
+        detalle: av.filas.some((f) => f.apoderados.estimada)
+          ? `${tasa(n.A, partA.base)} de ${partA.base} según matrícula (aún no se registran todas las papeletas)`
+          : `${tasa(n.A, partA.base)} de ${partA.base} papeletas entregadas`,
         e: "A",
       },
       {
@@ -627,7 +629,7 @@ export async function armarInforme(opciones: {
           tipo: "tabla",
           titulo: "Participación por nivel",
           origen:
-            "Padrón de credenciales usadas · base: papeletas entregadas (apoderados) y matrícula (estudiantes)",
+            "Padrón de credenciales usadas · base: papeletas entregadas (apoderados; la matrícula en los cursos que aún no las registran) y matrícula (estudiantes)",
           columnas: ["Nivel", "Apoderados", "%", "Estudiantes", "%"],
           filas: porNivel,
           numericas: [2, 4],

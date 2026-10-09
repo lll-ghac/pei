@@ -55,7 +55,13 @@ export async function generarLote(opciones: {
   return db.transaction(async (tx) => {
     const [lote] = await tx
       .insert(schema.lotes)
-      .values({ cursoCodigo: curso, estamento, prueba, cantidad, creadoPor: autor })
+      .values({
+        cursoCodigo: curso,
+        estamento,
+        prueba,
+        cantidad,
+        creadoPor: autor,
+      })
       .returning();
     await tx.insert(schema.credenciales).values(
       nuevas.map((usuario) => ({
@@ -85,12 +91,19 @@ export async function respaldoJson(motivo: string): Promise<string> {
     respuestas: await db.select().from(schema.respuestas),
     // Sin las contraseñas de las cuentas de gestión.
     gestores: await db
-      .select({ id: schema.gestores.id, usuario: schema.gestores.usuario, nombre: schema.gestores.nombre, rol: schema.gestores.rol, activo: schema.gestores.activo })
+      .select({
+        id: schema.gestores.id,
+        usuario: schema.gestores.usuario,
+        nombre: schema.gestores.nombre,
+        rol: schema.gestores.rol,
+        activo: schema.gestores.activo,
+      })
       .from(schema.gestores),
     ajustes: await db.select().from(schema.ajustes),
     bitacora: await db.select().from(schema.bitacora),
   };
-  const dir = process.env.RESPALDOS_DIR ?? path.join(process.cwd(), "respaldos");
+  const dir =
+    process.env.RESPALDOS_DIR ?? path.join(process.cwd(), "respaldos");
   await mkdir(dir, { recursive: true, mode: 0o700 });
   const marca = new Date().toISOString().replace(/[:.]/g, "-");
   const archivo = path.join(dir, `${motivo}-${marca}.json.gz`);
@@ -104,7 +117,8 @@ export async function respaldoJson(motivo: string): Promise<string> {
  */
 export async function reiniciarACero(autor: string) {
   const estado = await leerEstado();
-  if (estado.modo !== "prueba") throw new Error("El reinicio está bloqueado en modo Oficial.");
+  if (estado.modo !== "prueba")
+    throw new Error("El reinicio está bloqueado en modo Oficial.");
   const archivo = await respaldoJson("antes-de-reinicio");
 
   await db.transaction(async (tx) => {
@@ -113,7 +127,9 @@ export async function reiniciarACero(autor: string) {
       .select({ id: schema.lotes.id })
       .from(schema.lotes)
       .where(eq(schema.lotes.prueba, true));
-    await tx.delete(schema.credenciales).where(eq(schema.credenciales.prueba, true));
+    await tx
+      .delete(schema.credenciales)
+      .where(eq(schema.credenciales.prueba, true));
     if (lotesPrueba.length) {
       await tx.delete(schema.lotes).where(
         inArray(
@@ -125,7 +141,12 @@ export async function reiniciarACero(autor: string) {
     await tx
       .update(schema.credenciales)
       .set({ estado: "sin_usar", usadaEl: null, envioId: null })
-      .where(and(eq(schema.credenciales.prueba, false), eq(schema.credenciales.estado, "usada")));
+      .where(
+        and(
+          eq(schema.credenciales.prueba, false),
+          eq(schema.credenciales.estado, "usada"),
+        ),
+      );
     // También se limpian los bloqueos por intentos fallidos ocurridos durante las pruebas.
     await tx
       .update(schema.credenciales)
@@ -133,8 +154,14 @@ export async function reiniciarACero(autor: string) {
       .where(eq(schema.credenciales.prueba, false));
     await tx
       .insert(schema.ajustes)
-      .values({ clave: "estado", valor: { ...estado, cerrada: false, publicados: false } })
-      .onConflictDoUpdate({ target: schema.ajustes.clave, set: { valor: { ...estado, cerrada: false, publicados: false } } });
+      .values({
+        clave: "estado",
+        valor: { ...estado, cerrada: false, publicados: false },
+      })
+      .onConflictDoUpdate({
+        target: schema.ajustes.clave,
+        set: { valor: { ...estado, cerrada: false, publicados: false } },
+      });
     await tx.insert(schema.bitacora).values({
       actor: autor,
       accion: "Reinicio a cero",
@@ -149,8 +176,14 @@ export async function participacion(prueba: boolean) {
     .select({
       curso: schema.credenciales.cursoCodigo,
       estamento: schema.credenciales.estamento,
-      usadas: sql<number>`count(*) filter (where ${schema.credenciales.estado} = 'usada')`.mapWith(Number),
-      activas: sql<number>`count(*) filter (where ${schema.credenciales.estado} <> 'desactivada')`.mapWith(Number),
+      usadas:
+        sql<number>`count(*) filter (where ${schema.credenciales.estado} = 'usada')`.mapWith(
+          Number,
+        ),
+      activas:
+        sql<number>`count(*) filter (where ${schema.credenciales.estado} <> 'desactivada')`.mapWith(
+          Number,
+        ),
     })
     .from(schema.credenciales)
     .where(eq(schema.credenciales.prueba, prueba))
@@ -162,7 +195,8 @@ export type FilaAvance = {
   codigo: string;
   nombre: string;
   nivel: string;
-  apoderados: { usadas: number; base: number };
+  /** `estimada`: aún no se registran las papeletas entregadas y la base es la matrícula del curso. */
+  apoderados: { usadas: number; base: number; estimada: boolean };
   estudiantes: { usadas: number; base: number } | null;
 };
 
@@ -171,7 +205,11 @@ export async function avance() {
   const estado = await leerEstado();
   const prueba = estado.modo === "prueba";
   const [cursos, conteos] = await Promise.all([
-    db.select().from(schema.cursos).where(eq(schema.cursos.activo, true)).orderBy(schema.cursos.orden),
+    db
+      .select()
+      .from(schema.cursos)
+      .where(eq(schema.cursos.activo, true))
+      .orderBy(schema.cursos.orden),
     participacion(prueba),
   ]);
   const usadas = (curso: string | null, est: string) =>
@@ -181,9 +219,32 @@ export async function avance() {
     codigo: c.codigo,
     nombre: c.nombre,
     nivel: c.nivel,
-    apoderados: { usadas: usadas(c.codigo, "A"), base: c.papeletasApoderados ?? c.matricula },
-    estudiantes: c.tieneEstudiantes ? { usadas: usadas(c.codigo, "E"), base: c.matricula } : null,
+    apoderados: {
+      usadas: usadas(c.codigo, "A"),
+      base: c.papeletasApoderados ?? c.matricula,
+      estimada: c.papeletasApoderados == null,
+    },
+    estudiantes: c.tieneEstudiantes
+      ? { usadas: usadas(c.codigo, "E"), base: c.matricula }
+      : null,
   }));
-  const funcionarios = { usadas: usadas(null, "F"), base: estado.funcionariosTotal };
+  const funcionarios = {
+    usadas: usadas(null, "F"),
+    base: estado.funcionariosTotal,
+  };
   return { estado, filas, funcionarios };
+}
+
+/** Descargas registradas del PDF de papeletas, por lote (la bitácora anota «Lote N» o «Lote N · …»). */
+export async function descargasPapeletas(): Promise<Map<number, number>> {
+  const filas = await db
+    .select({ detalle: schema.bitacora.detalle })
+    .from(schema.bitacora)
+    .where(eq(schema.bitacora.accion, "PDF de papeletas descargado"));
+  const cuenta = new Map<number, number>();
+  for (const f of filas) {
+    const id = Number(f.detalle?.match(/^Lote (\d+)/)?.[1]);
+    if (id) cuenta.set(id, (cuenta.get(id) ?? 0) + 1);
+  }
+  return cuenta;
 }
