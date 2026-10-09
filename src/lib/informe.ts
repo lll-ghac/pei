@@ -23,6 +23,8 @@ import {
   prioridades,
   puntos,
   sintesis,
+  esFragil,
+  frasesEquivalentes,
   avisoSinSellos,
   LECTURA,
   notasCortes,
@@ -241,6 +243,10 @@ function escala(
 }
 
 /** Opciones donde los estamentos difieren 20 puntos o más. */
+/**
+ * Opciones donde los estamentos difieren 20 puntos o más, con los porcentajes que se ven, cuántas
+ * personas son y si la diferencia es frágil (una persona de un estamento con pocos casos la bajaría de 20).
+ */
 function brechas(urna: Record<Estamento, Respuestas[]>) {
   const filas: string[][] = [];
   for (const c of COMPARABLES) {
@@ -249,22 +255,71 @@ function brechas(urna: Record<Estamento, Respuestas[]>) {
       (e) => (n[e] ?? 0) >= MINIMO,
     );
     if (est.length < 2) continue;
-    for (const f of fs) {
-      const v = est.map((e) => Math.round(f.pct[e] ?? 0));
-      const dif = Math.max(...v) - Math.min(...v);
-      if (dif >= 20) {
-        filas.push([
-          c.titulo,
-          f.opcion.texto,
-          ...ESTAMENTOS.map((e) =>
-            est.includes(e) ? fmtPct(f.pct[e] ?? 0) : "—",
-          ),
-          puntos(dif),
-        ]);
-      }
+    const vista = prepararComparativa({
+      filas: fs.map((f) => ({ texto: f.opcion.texto, pct: f.pct })),
+      estamentos: est,
+      n,
+      ordinal: c.ordinal,
+    });
+    for (const f of vista.filas) {
+      if (f.dif == null || f.dif < 20) continue;
+      const orden = est
+        .map((e) => [e, Math.round(f.pct[e] ?? 0)] as [Estamento, number])
+        .sort((a, b) => b[1] - a[1]);
+      const fragil = esFragil({
+        fila: f,
+        estamentos: est,
+        n,
+        alto: orden[0],
+        bajo: orden[orden.length - 1],
+        umbral: 20,
+      });
+      filas.push([
+        c.titulo,
+        f.texto,
+        ...ESTAMENTOS.map((e) =>
+          est.includes(e) && f.pct[e] != null
+            ? `${fmtPct(f.pct[e]!)} (${f.conteo[e] ?? 0} de ${n[e]})`
+            : "—",
+        ),
+        `${puntos(f.dif)}${fragil ? " ⚠" : ""}`,
+      ]);
     }
   }
   return filas;
+}
+
+/** Frases equivalentes de las escalas, lado a lado (Informe sección 4 y Resultados → Escalas). */
+export function bloqueEquivalentes(
+  urna: Record<Estamento, Respuestas[]>,
+): Bloque[] {
+  const filas = frasesEquivalentes(urna);
+  const celda = (
+    c: { codigo: string; pct: number; n: number } | null | undefined,
+  ) => (c ? `${fmtPct(c.pct)} · ${c.codigo} (n ${c.n})` : "—");
+  return [
+    {
+      tipo: "tabla",
+      titulo: "Frases equivalentes entre estamentos",
+      origen:
+        "Apoderados (A5) y funcionarios (F7): % de acuerdo entre quienes opinaron. Estudiantes (E2): % «casi siempre» + «siempre», otra escala: se muestra al lado, sin restar. La diferencia se calcula solo con la misma frase y la misma escala. La correspondencia entre frases la propuso el desarrollo y debe revisarla la comisión.",
+      columnas: [
+        "Tema",
+        "Apoderados",
+        "Estudiantes (frecuencia)",
+        "Funcionarios",
+        "Diferencia A–F",
+      ],
+      filas: filas.map((f) => [
+        `${f.tema}${f.misma ? " (misma frase en A y F)" : ""}`,
+        celda(f.celdas.A),
+        celda(f.celdas.E),
+        celda(f.celdas.F),
+        f.difAF != null ? puntos(f.difAF) : f.misma ? "—" : "frases distintas",
+      ]),
+      numericas: [4],
+    },
+  ];
 }
 
 /** Temas de las respuestas abiertas por estamento (% de textos clasificados que mencionan el tema). */
@@ -728,6 +783,7 @@ export async function armarInforme(opciones: {
         ...escala("A5", [{ nombre: "Apoderados", lista: urna.A }]),
         ...escala("E2", [{ nombre: "Estudiantes", lista: urna.E }]),
         ...escala("F7", gruposF(["todos", "docentes", "asistentes"])),
+        ...bloqueEquivalentes(urna),
         {
           tipo: "nota",
           texto:
@@ -914,13 +970,13 @@ export async function armarInforme(opciones: {
       numero: "11",
       titulo: "Entorno y referentes",
       aporta: "Contexto comparado",
-      preguntas: "A14, E9, F14 y estudio de referentes",
+      preguntas: "A14, E9, F14",
       bloques: [
         comparativa(comparable("Redes"), urna),
         {
           tipo: "nota",
           texto:
-            "Los sellos frecuentes en los colegios top 20 SIMCE de Antofagasta y Chile vienen del estudio de referentes de la comisión; no son datos de esta encuesta.",
+            "Esta sección muestra solo las redes que la comunidad quiere. El estudio de referentes (sellos frecuentes en los colegios top 20 SIMCE de Antofagasta y Chile) lo prepara la comisión fuera de la plataforma y se agrega en el documento del PEI; no son datos de esta encuesta.",
         },
       ],
     },
@@ -935,7 +991,8 @@ export async function armarInforme(opciones: {
           ? {
               tipo: "tabla",
               titulo: "Diferencias entre estamentos (20 puntos o más)",
-              origen: "Preguntas comunes a los estamentos",
+              origen:
+                "Preguntas comunes a los estamentos · % (personas de n) · ⚠ frágil: con una persona distinta en un estamento de pocos casos bajaría de 20 puntos",
               columnas: [
                 "Pregunta",
                 "Opción",

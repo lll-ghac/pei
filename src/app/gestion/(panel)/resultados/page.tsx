@@ -4,6 +4,8 @@ import { listarTemas, listarTextos, sincronizarTextos } from "@/lib/abiertas";
 import { leerEstado } from "@/lib/estado";
 import { exigirGestor } from "@/lib/gestion";
 import { AvisoEnsayo } from "../../Ayuda";
+import { VistaBloque } from "@/components/InformeVista";
+import { bloqueEquivalentes } from "@/lib/informe";
 import {
   BRECHA,
   COMPARABLES,
@@ -473,6 +475,11 @@ export default async function Resultados(
 
       {vista === "escalas" && (
         <div className="space-y-8">
+          <section className="bg-papel border border-filete p-5">
+            {bloqueEquivalentes(urna).map((b, i) => (
+              <VistaBloque key={i} b={b} />
+            ))}
+          </section>
           {(["A", "E", "F"] as Estamento[]).map((e) => {
             const p = preguntasDe(ENCUESTAS[e]).find(
               (x) => x.codigo === ESCALAS_POR[e],

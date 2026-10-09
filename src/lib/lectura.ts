@@ -162,6 +162,8 @@ export function esFragil(opciones: {
   n: Partial<Record<Estamento, number>>;
   alto: [Estamento, number];
   bajo: [Estamento, number];
+  /** Umbral de la diferencia (por defecto BRECHA). */
+  umbral?: number;
 }): boolean {
   const { fila, estamentos, n } = opciones;
   const redondeado = (e: Estamento) => Math.round(fila.pct[e] ?? 0);
@@ -177,7 +179,7 @@ export function esFragil(opciones: {
       (((fila.conteo[e] as number) + cambio) / nE) * 100,
     );
     const v = estamentos.map((x) => (x === e ? nuevo : redondeado(x)));
-    return Math.max(...v) - Math.min(...v) < BRECHA;
+    return Math.max(...v) - Math.min(...v) < (opciones.umbral ?? BRECHA);
   });
 }
 

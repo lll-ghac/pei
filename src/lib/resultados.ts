@@ -543,3 +543,75 @@ export async function fechaCierre(): Promise<Date | null> {
     .limit(1);
   return fila?.fecha ?? null;
 }
+
+// ---------- Frases equivalentes entre las escalas (A5, E2, F7) ----------
+
+/**
+ * Frases que tocan el mismo tema en las tres escalas. La correspondencia la propuso el desarrollo
+ * (9/10) y debe revisarla la comisión. `misma`: apoderados y funcionarios tienen la misma frase y la
+ * misma escala (de acuerdo), así que solo ahí se calcula la diferencia entre ellos. Estudiantes responde
+ * con frecuencia (otra escala): se muestra al lado, sin restar.
+ */
+export const EQUIVALENTES: {
+  tema: string;
+  codigos: Partial<Record<Estamento, string>>;
+  misma?: boolean;
+}[] = [
+  {
+    tema: "Trato igualitario entre hombres y mujeres",
+    codigos: { A: "A5_9", E: "E2_9", F: "F7_C5" },
+    misma: true,
+  },
+  { tema: "Seguridad", codigos: { A: "A5_3", E: "E2_2" } },
+  {
+    tema: "Conflictos y convivencia",
+    codigos: { A: "A5_6", E: "E2_5", F: "F7_C1" },
+  },
+  {
+    tema: "Escucha y participación",
+    codigos: { A: "A5_7", E: "E2_7", F: "F7_L4" },
+  },
+  { tema: "Apoyo de los profesores", codigos: { A: "A5_5", E: "E2_3" } },
+  { tema: "Comunicación oportuna", codigos: { A: "A5_2", F: "F7_L1" } },
+  { tema: "A gusto en la escuela", codigos: { A: "A5_1", E: "E2_1" } },
+  { tema: "Aprendizaje", codigos: { A: "A5_4", E: "E2_6", F: "F7_P1" } },
+];
+
+export type CeldaEquivalente = {
+  codigo: string;
+  texto: string;
+  pct: number;
+  n: number;
+} | null;
+
+export function frasesEquivalentes(urna: Record<Estamento, Respuestas[]>) {
+  return EQUIVALENTES.map((eq) => {
+    const celdas: Partial<Record<Estamento, CeldaEquivalente>> = {};
+    for (const [e, codigo] of Object.entries(eq.codigos) as [
+      Estamento,
+      string,
+    ][]) {
+      const [pregunta, item] = codigo.split("_");
+      const p = preguntasDe(ENCUESTAS[e]).find((x) => x.codigo === pregunta);
+      if (!p || urna[e].length < MINIMO) {
+        celdas[e] = null;
+        continue;
+      }
+      const r = resumir(p, urna[e], ENCUESTAS[e]);
+      const it =
+        r.tipo === "escala"
+          ? r.items.find((x) => x.codigo === item)
+          : undefined;
+      celdas[e] = it
+        ? { codigo, texto: it.texto, pct: it.favorable, n: it.n }
+        : null;
+    }
+    const a = celdas.A;
+    const f = celdas.F;
+    const difAF =
+      eq.misma && a && f
+        ? Math.abs(Math.round(a.pct) - Math.round(f.pct))
+        : null;
+    return { tema: eq.tema, misma: !!eq.misma, celdas, difAF };
+  });
+}
