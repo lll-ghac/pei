@@ -15,8 +15,13 @@ import { ESCALAS } from "./encuestas/listas";
 import {
   BRECHA,
   esFragil,
+  leerRazones,
   prepararComparativa,
+  rankingTop5,
   type DiferenciaGrande,
+  type Lectura,
+  type LugarTop,
+  type Razones,
 } from "./lectura";
 
 export * from "./lectura";
@@ -330,26 +335,29 @@ const POR_QUE: Record<Estamento, string> = { A: "A11", E: "E8", F: "F11" };
 
 export type CeldaPrioridad = {
   pctTop3: number;
-  rango: number;
-  enTop5: boolean;
+  /** Personas que la pusieron en su top 3. */
+  conteo: number;
+  /** Personas que la eligieron como la más importante. */
   masImportante: number;
-} | null;
+} & LugarTop;
+
 export type FilaPrioridad = {
   opcion: Opcion;
-  por: Record<Estamento, CeldaPrioridad>;
+  por: Record<Estamento, CeldaPrioridad | null>;
   estamentosTop5: number;
-  candidato: boolean;
-  converge: boolean;
-  /** Razones de quienes la eligieron como la más importante (todos los estamentos). */
-  razones: {
-    debilidad: number;
-    fortaleza: number;
-    futuro: number;
-    sector: number;
-    distinguiria: number;
-    otra: number;
-    total: number;
-  };
+  /** Prioridad convergente: en el top 5 de al menos 2 estamentos (con MINIMO respuestas o más). */
+  convergente: boolean;
+  /** En el top 5 de los 3 estamentos. */
+  converge3: boolean;
+  /** Es convergente solo gracias a un corte frágil del top 5 en algún estamento. */
+  convergenciaFragil: boolean;
+  /** Razones de quienes la eligieron como la más importante (todas las personas juntas). */
+  razones: Razones;
+  /** Lectura de la convergente: sello candidato, objetivo de mejora o a discutir (null si no es convergente). */
+  lectura: Lectura | null;
+  lecturaFragil: boolean;
+  /** Nadie la eligió como la más importante: no hay razones para leerla. */
+  sinRazones: boolean;
 };
 
 export function prioridades(urna: Record<Estamento, Respuestas[]>) {
@@ -361,49 +369,41 @@ export function prioridades(urna: Record<Estamento, Respuestas[]>) {
   const validos = (Object.keys(n) as Estamento[]).filter((e) => n[e] >= MINIMO);
   const base = L.PRIORIDADES_ADULTOS;
 
-  const porEstamento: Record<Estamento, Map<string, CeldaPrioridad>> = {
-    A: new Map(),
-    E: new Map(),
-    F: new Map(),
+  const porEstamento: Record<Estamento, CeldaPrioridad[]> = {
+    A: [],
+    E: [],
+    F: [],
   };
+  const cortes: Partial<
+    Record<Estamento, { conLugar: number; corteDudoso: boolean }>
+  > = {};
   for (const e of validos) {
     const lista = urna[e];
-    const filas = base.map((o) => ({
-      codigo: o.codigo,
-      pctTop3: pct(
+    const conteos = base.map(
+      (o) =>
         lista.filter((r) => r[TOP3[e]]?.codigos?.includes(o.codigo)).length,
-        lista.length,
-      ),
+    );
+    const top = rankingTop5(conteos);
+    cortes[e] = { conLugar: top.conLugar, corteDudoso: top.corteDudoso };
+    porEstamento[e] = base.map((o, i) => ({
+      pctTop3: pct(conteos[i], lista.length),
+      conteo: conteos[i],
       masImportante: lista.filter(
         (r) => r[MAS_IMPORTANTE[e]]?.codigos?.[0] === o.codigo,
       ).length,
+      ...top.filas[i],
     }));
-    const orden = [...filas].sort(
-      (a, b) => b.pctTop3 - a.pctTop3 || b.masImportante - a.masImportante,
-    );
-    // Rango por competencia (1, 2, 2, 4…): los empates comparten lugar.
-    orden.forEach((f, i) => {
-      const rango =
-        i > 0 && f.pctTop3 === orden[i - 1].pctTop3
-          ? porEstamento[e].get(orden[i - 1].codigo)!.rango
-          : i + 1;
-      porEstamento[e].set(f.codigo, {
-        pctTop3: f.pctTop3,
-        masImportante: f.masImportante,
-        rango,
-        enTop5: rango <= 5 && f.pctTop3 > 0,
-      });
-    });
   }
 
-  const filas: FilaPrioridad[] = base.map((o) => {
+  const filas: FilaPrioridad[] = base.map((o, i) => {
     const por = { A: null, E: null, F: null } as Record<
       Estamento,
-      CeldaPrioridad
+      CeldaPrioridad | null
     >;
-    for (const e of validos) por[e] = porEstamento[e].get(o.codigo) ?? null;
-    const estamentosTop5 = validos.filter((e) => por[e]?.enTop5).length;
-    const razones = {
+    for (const e of validos) por[e] = porEstamento[e][i];
+    const enTop = validos.filter((e) => por[e]?.enTop5);
+    const solidos = enTop.filter((e) => !por[e]!.fragil);
+    const razones: Razones = {
       debilidad: 0,
       fortaleza: 0,
       futuro: 0,
@@ -425,29 +425,88 @@ export function prioridades(urna: Record<Estamento, Respuestas[]>) {
         else razones.otra++;
       }
     }
+    const convergente = validos.length >= 2 && enTop.length >= 2;
+    const leida = leerRazones(razones);
     return {
       opcion: o,
       por,
-      estamentosTop5,
-      candidato: validos.length >= 2 && estamentosTop5 >= 2,
-      converge: validos.length === 3 && estamentosTop5 === 3,
+      estamentosTop5: enTop.length,
+      convergente,
+      converge3: validos.length === 3 && enTop.length === 3,
+      convergenciaFragil: convergente && solidos.length < 2,
       razones,
+      lectura: convergente ? leida.lectura : null,
+      lecturaFragil: convergente && leida.fragil,
+      sinRazones: leida.sinBase,
     };
   });
   filas.sort(
     (a, b) =>
-      Number(b.candidato) - Number(a.candidato) ||
+      Number(b.convergente) - Number(a.convergente) ||
       b.estamentosTop5 - a.estamentosTop5 ||
-      promedioRango(a) - promedioRango(b),
+      promedioLugar(a) - promedioLugar(b),
   );
-  return { n, validos, filas };
+  return { n, validos, filas, cortes };
 }
 
-function promedioRango(f: FilaPrioridad) {
+function promedioLugar(f: FilaPrioridad) {
   const r = Object.values(f.por)
-    .filter(Boolean)
-    .map((c) => c!.rango);
+    .filter((c): c is CeldaPrioridad => c != null && c.lugar != null)
+    .map((c) => c.lugar!);
   return r.length ? r.reduce((s, x) => s + x, 0) / r.length : 99;
+}
+
+/** La regla, explicada igual en Resultados, Informe y Manual (reglas acordadas 9/10, según el MVP). */
+export const REGLA_PRIORIDADES = [
+  `Prioridad convergente: está en el top 5 de al menos 2 estamentos (con ${MINIMO} respuestas o más). El lugar sigue las mismas reglas del Resumen: hace falta que la elijan 2 personas o más, y las que se separan por una persona comparten lugar («=»). Si el corte del 5° lugar es un empate, entran todas las empatadas, marcadas frágiles (⚠).`,
+  "Su lectura sale de por qué la eligieron como la más importante, con todas las personas juntas: sello candidato si más de la mitad la justifica como fortaleza o porque distinguiría a la escuela; objetivo de mejora si más de la mitad la justifica como debilidad; a discutir en cualquier otro caso. «Clave para el futuro», «familias del sector» y «otra» cuentan en el total pero no inclinan la lectura (el MVP no las asigna a ninguna). Exactamente la mitad no es mayoría.",
+  "⚠ marca una lectura o un corte frágil: una persona que hubiera respondido distinto lo cambiaría. Con bases chicas casi todas las lecturas son frágiles: es lo que dicen los datos, no un error. La plataforma propone; la decisión es de la comisión.",
+];
+
+/** Notas por estamento: top 5 más corto o corte del top 5 poco claro. */
+export function notasCortes(
+  cortes: Partial<
+    Record<Estamento, { conLugar: number; corteDudoso: boolean }>
+  >,
+): string[] {
+  const nombre: Record<Estamento, string> = {
+    A: "Apoderados",
+    E: "Estudiantes",
+    F: "Funcionarios",
+  };
+  const notas: string[] = [];
+  for (const [e, c] of Object.entries(cortes) as [
+    Estamento,
+    { conLugar: number; corteDudoso: boolean },
+  ][]) {
+    if (c.conLugar < 5)
+      notas.push(
+        `${nombre[e]}: solo ${c.conLugar} ${c.conLugar === 1 ? "prioridad recibe" : "prioridades reciben"} lugar (elegidas por 2 personas o más), así que su top 5 es más corto.`,
+      );
+    else if (c.corteDudoso)
+      notas.push(
+        `${nombre[e]}: el corte del top 5 no es claro (lo cambia una persona).`,
+      );
+  }
+  return notas;
+}
+
+/** Texto de cada lectura, igual en el panel, el Informe y la página pública. */
+export const LECTURA: Record<Lectura, string> = {
+  sello: "Sello candidato",
+  mejora: "Objetivo de mejora",
+  discutir: "A discutir",
+};
+
+/** Aviso cuando ninguna convergente tiene mayoría clara (para que no parezca un error). */
+export function avisoSinSellos(filas: FilaPrioridad[]): string | null {
+  const conv = filas.filter((f) => f.convergente);
+  if (!conv.length || conv.some((f) => f.lectura === "sello")) return null;
+  return `Ninguna prioridad convergente tiene mayoría clara de razones para ser sello candidato; ${
+    conv.length === 1
+      ? "la convergente queda"
+      : `las ${conv.length} convergentes quedan`
+  } para discutir en taller${conv.some((f) => f.lectura === "mejora") ? " o como objetivos de mejora" : ""}.`;
 }
 
 export { ENCUESTAS, ESCALAS };

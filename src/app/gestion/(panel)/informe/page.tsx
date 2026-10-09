@@ -63,10 +63,11 @@ export default async function Informe() {
             archivo no cambió (Panel → Descargas → Verificar un archivo).
           </p>
           <p>
-            El informe entrega datos, no conclusiones: la plataforma propone
-            sellos candidatos con una regla fija, pero la decisión es de la
-            comisión. Los datos completos están en la sábana (Panel →
-            Descargas).
+            El informe entrega datos, no conclusiones: la plataforma marca las
+            prioridades convergentes (top 5 en 2 o más estamentos) y propone su
+            lectura (sello candidato, objetivo de mejora o a discutir) con una
+            regla fija, pero la decisión es de la comisión. Los datos completos
+            están en la sábana (Panel → Descargas).
           </p>
         </Ayuda>
       </div>

@@ -2,7 +2,7 @@
 // Uso, desde la carpeta del proyecto:  npx tsx --test pruebas/lectura.test.mts
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BRECHA, esFragil, prepararComparativa, puntos } from "../src/lib/lectura.ts";
+import { BRECHA, esFragil, leerRazones, prepararComparativa, puntos, rankingTop5 } from "../src/lib/lectura.ts";
 
 type E = "A" | "E" | "F";
 /** Arma filas a partir de cuántas personas eligieron cada opción. */
@@ -88,4 +88,55 @@ test("fragilidad: sólida si ni el cambio de una persona la baja de 30", () => {
   // −1 en E → 11/19 = 58 %: 58 − 22 = 36 → no frágil.
   const fila = { pct: { E: (12 / 19) * 100, A: (2 / 9) * 100 }, conteo: { E: 12, A: 2 } };
   assert.equal(esFragil({ fila, estamentos: ["A", "E"], n: { A: 9, E: 19 }, alto: ["E", 63], bajo: ["A", 22] }), false);
+});
+
+// ---------- Prioridades (reglas acordadas 9/10) ----------
+const razones = (o: Partial<Record<"debilidad" | "fortaleza" | "futuro" | "sector" | "distinguiria" | "otra", number>>) => {
+  const r = { debilidad: 0, fortaleza: 0, futuro: 0, sector: 0, distinguiria: 0, otra: 0, ...o, total: 0 };
+  r.total = r.debilidad + r.fortaleza + r.futuro + r.sector + r.distinguiria + r.otra;
+  return r;
+};
+
+test("«futuro» es neutral: a) con 8 de 22 fortaleza o distintiva queda a discutir", () => {
+  assert.equal(leerRazones(razones({ fortaleza: 6, distinguiria: 2, debilidad: 6, futuro: 8 })).lectura, "discutir");
+});
+
+test("exactamente la mitad no es mayoría: d) debilidad 3 de 6 queda a discutir", () => {
+  assert.equal(leerRazones(razones({ debilidad: 3, fortaleza: 1, futuro: 2 })).lectura, "discutir");
+});
+
+test("m) fortaleza 1, debilidad 2, futuro 2 (de 5) queda a discutir, no sello", () => {
+  assert.equal(leerRazones(razones({ fortaleza: 1, debilidad: 2, futuro: 2 })).lectura, "discutir");
+});
+
+test("sello candidato sólido y objetivo de mejora frágil", () => {
+  const sello = leerRazones(razones({ fortaleza: 4, distinguiria: 2, debilidad: 1, futuro: 1 }));
+  assert.deepEqual([sello.lectura, sello.fragil], ["sello", false]);
+  const mejora = leerRazones(razones({ debilidad: 6, futuro: 4 }));
+  assert.deepEqual([mejora.lectura, mejora.fragil], ["mejora", true]);
+});
+
+test("sin razones: nadie la eligió como la más importante", () => {
+  assert.equal(leerRazones(razones({})).sinBase, true);
+});
+
+test("top 5: el corte que depende de una persona queda frágil", () => {
+  // m) con 2 personas en el 5° lugar y otra opción con 1 persona (que no recibe lugar).
+  const t = rankingTop5([9, 7, 5, 4, 2, 1, 0]);
+  assert.equal(t.filas[4].enTop5, true);
+  assert.equal(t.filas[4].fragil, true);
+  assert.equal(t.filas[0].fragil, false);
+});
+
+test("top 5: un empate en el corte deja entrar a todas, frágiles", () => {
+  const t = rankingTop5([10, 9, 8, 7, 6, 5, 1]);
+  assert.equal(t.filas.filter((f) => f.enTop5).length, 6);
+  assert.ok(t.corteDudoso);
+  assert.ok(t.filas[5].fragil && t.filas[4].fragil);
+});
+
+test("top 5 más corto si pocas opciones tienen 2 personas o más", () => {
+  const t = rankingTop5([5, 3, 1, 1, 0]);
+  assert.equal(t.conLugar, 2);
+  assert.equal(t.filas[2].enTop5, false);
 });

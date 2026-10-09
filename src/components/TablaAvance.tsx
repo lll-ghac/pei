@@ -163,7 +163,8 @@ export function TablaAvance({
             {" "}
             <strong className="text-tinta">*</strong> Matrícula del curso: aún
             no se registran las papeletas entregadas. Como cada familia recibe
-            una sola papeleta, el porcentaje real de esos cursos será mayor.
+            una sola papeleta, el porcentaje real de esos cursos probablemente
+            será mayor.
           </>
         )}
       </p>

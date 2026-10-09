@@ -5,6 +5,7 @@ import type { Estamento } from "@/lib/encuestas";
 import { ESCALAS } from "@/lib/encuestas/listas";
 import {
   BRECHA,
+  LECTURA,
   POCOS_CASOS,
   prepararComparativa,
   puntos,
@@ -13,6 +14,7 @@ import {
   type FilaComparable,
   type FilaPrioridad,
   type FilaVista,
+  type Lectura,
   type Orden,
 } from "@/lib/resultados";
 
@@ -530,24 +532,39 @@ export function DistribucionItem({
   );
 }
 
-const ESTADO_SELLO = {
-  converge: { texto: "Converge en los 3", clase: "text-timbre" },
-  candidato: { texto: "Sello candidato", clase: "text-timbre" },
-  divide: { texto: "Divide opiniones", clase: "text-lacre" },
-  nada: { texto: "—", clase: "text-gris-texto" },
+const CLASE_LECTURA: Record<Lectura, string> = {
+  sello: "text-timbre",
+  mejora: "text-lacre",
+  discutir: "text-tinta",
 };
 
-/** Ranking de las 15 prioridades por estamento, con la regla de sello candidato del MVP. */
+/** Marca ⚠ de fragilidad, con su explicación para lectores de pantalla. */
+function MarcaFragil({ titulo }: { titulo: string }) {
+  return (
+    <span className="text-lacre font-bold" title={titulo}>
+      {" "}
+      ⚠<span className="sr-only"> {titulo}</span>
+    </span>
+  );
+}
+
+/**
+ * Las 15 prioridades por estamento con las reglas acordadas (9/10): lugar con las reglas del Resumen,
+ * top 5 con corte frágil, prioridad convergente (top 5 en 2 o más estamentos) y su lectura según las
+ * razones (sello candidato, objetivo de mejora o a discutir; «clave para el futuro» es neutral).
+ */
 export function TablaPrioridades({
   filas,
   validos,
+  n,
 }: {
   filas: FilaPrioridad[];
   validos: Estamento[];
+  n: Record<Estamento, number>;
 }) {
   return (
     <div className="relative overflow-x-auto">
-      <table className="w-full min-w-[56rem] text-[16px]">
+      <table className="w-full min-w-[60rem] text-[16px]">
         <thead>
           <tr className="text-left align-bottom">
             <th
@@ -566,7 +583,7 @@ export function TablaPrioridades({
                   <Muestra e={e} /> {NOMBRE[e]}
                 </span>
                 <span className="block normal-case tracking-normal font-normal text-[13px]">
-                  lugar · % en su top 3
+                  % en su top 3 · lugar
                 </span>
               </th>
             ))}
@@ -574,7 +591,7 @@ export function TablaPrioridades({
               scope="col"
               className="rotulo text-[13px] text-grafito pb-1.5 px-2"
             >
-              Regla
+              Convergencia
             </th>
             <th
               scope="col"
@@ -582,26 +599,18 @@ export function TablaPrioridades({
             >
               Por qué la eligieron
               <span className="block normal-case tracking-normal font-normal text-[13px]">
-                como la más importante
+                como la más importante · lectura
               </span>
             </th>
           </tr>
         </thead>
         <tbody>
           {filas.map((f) => {
-            const estado = f.converge
-              ? "converge"
-              : f.candidato
-                ? "candidato"
-                : f.estamentosTop5 === 1
-                  ? "divide"
-                  : "nada";
             const r = f.razones;
-            const sello = r.fortaleza + r.distinguiria;
             return (
               <tr
                 key={f.opcion.codigo}
-                className={`border-t border-filete ${f.candidato ? "bg-timbre-claro/60" : ""}`}
+                className={`border-t border-filete ${f.convergente ? "bg-timbre-claro/60" : ""}`}
               >
                 <th
                   scope="row"
@@ -618,37 +627,66 @@ export function TablaPrioridades({
                     <td key={e} className="py-2 px-2 align-top">
                       {c && (
                         <>
-                          <span
-                            className={`rotulo text-[15px] ${c.enTop5 ? "text-tinta" : "text-gris-texto"}`}
-                          >
-                            {c.rango}.º{c.enTop5 ? " · top 5" : ""}
-                          </span>
                           <Barra
                             valor={c.pctTop3}
                             e={e}
+                            lugar={c.lugar}
+                            empate={c.empate}
+                            personas={`${c.conteo} de ${n[e]} personas`}
                             etiqueta={`${NOMBRE[e]}: ${fmt(c.pctTop3)} la puso en su top 3; ${c.masImportante} la eligieron como la más importante`}
                           />
+                          {c.enTop5 && (
+                            <span className="block text-[13px] text-grafito">
+                              top 5
+                              {c.fragil && (
+                                <MarcaFragil titulo="corte del top 5 frágil: una persona lo cambia" />
+                              )}
+                            </span>
+                          )}
                         </>
                       )}
                     </td>
                   );
                 })}
-                <td
-                  className={`py-2 px-2 align-top font-bold ${ESTADO_SELLO[estado].clase}`}
-                >
-                  {ESTADO_SELLO[estado].texto}
+                <td className="py-2 px-2 align-top">
+                  {f.convergente ? (
+                    <span className="font-bold text-tinta">
+                      {f.converge3
+                        ? "Convergente · 3 estamentos"
+                        : "Convergente"}
+                      {f.convergenciaFragil && (
+                        <MarcaFragil titulo="convergente solo gracias a un corte frágil del top 5" />
+                      )}
+                    </span>
+                  ) : f.estamentosTop5 === 1 ? (
+                    <span className="text-grafito">Top 5 en 1 estamento</span>
+                  ) : (
+                    <span className="text-gris-texto">—</span>
+                  )}
                 </td>
                 <td className="py-2 pl-2 align-top text-[15px] text-grafito">
-                  {r.total < 5 ? (
-                    <span className="text-gris-texto">Menos de 5</span>
+                  {f.sinRazones ? (
+                    <span className="text-gris-texto">
+                      Nadie la eligió como la más importante
+                    </span>
                   ) : (
                     <>
-                      Fortaleza o distintiva {sello} · Debilidad {r.debilidad}
-                      <span className="block font-bold text-tinta">
-                        {sello >= r.debilidad
-                          ? "Lectura: sello"
-                          : "Lectura: objetivo de mejora"}
-                      </span>
+                      Fortaleza o distintiva {r.fortaleza + r.distinguiria} ·
+                      Futuro {r.futuro} · Debilidad {r.debilidad}
+                      {r.sector + r.otra > 0 && (
+                        <> · Otras {r.sector + r.otra}</>
+                      )}
+                      <span className="text-gris-texto"> (de {r.total})</span>
+                      {f.lectura && (
+                        <span
+                          className={`block font-bold ${CLASE_LECTURA[f.lectura]}`}
+                        >
+                          {LECTURA[f.lectura]}
+                          {f.lecturaFragil && (
+                            <MarcaFragil titulo="lectura frágil: una persona con otra razón la cambiaría" />
+                          )}
+                        </span>
+                      )}
                     </>
                   )}
                 </td>

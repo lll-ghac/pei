@@ -246,9 +246,16 @@ export default async function ManualComision() {
             oficial.
           </li>
           <li>
-            El informe entrega <strong>datos, no conclusiones</strong>. Propone
-            sellos candidatos con una regla fija (top 5 en al menos 2
-            estamentos); la decisión es de la comisión.
+            El informe entrega <strong>datos, no conclusiones</strong>. Marca
+            las <strong>prioridades convergentes</strong> (top 5 en al menos 2
+            estamentos) y propone su lectura según por qué la eligieron:{" "}
+            <strong>sello candidato</strong> (más de la mitad, fortaleza o «nos
+            distinguiría»), <strong>objetivo de mejora</strong> (más de la
+            mitad, debilidad) o <strong>a discutir</strong>. «Clave para el
+            futuro» no inclina la lectura. Con pocas respuestas, casi todas las
+            lecturas salen frágiles (⚠): es lo que dicen los datos. Puede que no
+            aparezca ningún sello; eso también es un dato. La decisión es de la
+            comisión.
           </li>
           <li>
             <strong>Página pública</strong> (<code>/resultados</code>): versión

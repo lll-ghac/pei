@@ -191,3 +191,109 @@ export function esFragil(opciones: {
 /** «1 pt», «12 pts». */
 export const puntos = (x: number) =>
   `${Math.round(x)} ${Math.round(x) === 1 ? "pt" : "pts"}`;
+
+// ---------- Prioridades: top 5 y lectura de las razones (reglas acordadas 9/10) ----------
+
+export const TOP = 5;
+
+export type LugarTop = {
+  /** Lugar con las mismas reglas del Resumen: 2 personas o más y empate técnico (una persona o menos). */
+  lugar?: number;
+  empate: boolean;
+  enTop5: boolean;
+  /** En el top 5, pero el corte depende de una persona: hay una opción fuera a una persona o menos. */
+  fragil: boolean;
+};
+
+/**
+ * Top 5 de un estamento a partir de cuántas personas eligieron cada prioridad. Si el corte es un empate,
+ * entran todas las empatadas, marcadas frágiles. Devuelve también cuántas reciben lugar (el top 5 queda
+ * más corto si menos de 5 opciones tienen 2 personas o más) y si el corte no es claro.
+ */
+export function rankingTop5(conteos: number[]): {
+  filas: LugarTop[];
+  conLugar: number;
+  corteDudoso: boolean;
+} {
+  const filas: LugarTop[] = conteos.map((v) => {
+    const rango = 1 + conteos.filter((x) => x > v + 1).length;
+    const lugar = v >= 2 ? rango : undefined;
+    return {
+      lugar,
+      empate: false,
+      enTop5: lugar != null && lugar <= TOP,
+      fragil: false,
+    };
+  });
+  filas.forEach((f, i) => {
+    if (f.lugar != null)
+      f.empate = filas.some((g, k) => k !== i && g.lugar === f.lugar);
+  });
+  // Frágil en el corte: hay una opción fuera del top 5 a una persona o menos.
+  filas.forEach((f, i) => {
+    if (!f.enTop5) return;
+    f.fragil = conteos.some(
+      (x, k) => !filas[k].enTop5 && x >= conteos[i] - 1 && x > 0,
+    );
+  });
+  const enTop = filas.filter((f) => f.enTop5).length;
+  // Empate en el corte que deja más de 5 dentro: las que quedan a una persona o menos del 5° lugar
+  // entran todas, pero frágiles.
+  if (enTop > TOP) {
+    const quinto = conteos
+      .filter((_, i) => filas[i].enTop5)
+      .sort((a, b) => b - a)[TOP - 1];
+    filas.forEach((f, i) => {
+      if (f.enTop5 && conteos[i] <= quinto + 1) f.fragil = true;
+    });
+  }
+  const corteDudoso = enTop > TOP || filas.some((f) => f.fragil);
+  return {
+    filas,
+    conLugar: filas.filter((f) => f.lugar != null).length,
+    corteDudoso,
+  };
+}
+
+export type Razones = {
+  debilidad: number;
+  fortaleza: number;
+  futuro: number;
+  sector: number;
+  distinguiria: number;
+  otra: number;
+  total: number;
+};
+export type Lectura = "sello" | "mejora" | "discutir";
+
+/**
+ * Lectura de una prioridad convergente según por qué la eligieron como la más importante (MVP):
+ * sello candidato si más de la mitad la justifica como fortaleza o «nos distinguiría»; objetivo de
+ * mejora si más de la mitad la justifica como debilidad; si no, a discutir. «Clave para el futuro»,
+ * «familias del sector» y «otra» cuentan en el total pero no suman a ninguna (son neutrales).
+ * Exactamente la mitad no es mayoría. Frágil: una persona con otra razón cambiaría la lectura.
+ */
+export function leerRazones(r: Razones): {
+  lectura: Lectura;
+  fragil: boolean;
+  sinBase: boolean;
+} {
+  const sello = r.fortaleza + r.distinguiria;
+  const mayoria = (x: number, total: number) => x * 2 > total;
+  const lectura = (s: number, d: number, t: number): Lectura =>
+    mayoria(s, t) ? "sello" : mayoria(d, t) ? "mejora" : "discutir";
+  if (r.total === 0)
+    return { lectura: "discutir", fragil: false, sinBase: true };
+  const actual = lectura(sello, r.debilidad, r.total);
+  // Una persona cambia de razón: de sello a neutral o a debilidad, de debilidad a neutral o a sello, etc.
+  const neutrales = r.total - sello - r.debilidad;
+  const variantes: [number, number][] = [];
+  if (sello > 0)
+    variantes.push([sello - 1, r.debilidad], [sello - 1, r.debilidad + 1]);
+  if (r.debilidad > 0)
+    variantes.push([sello, r.debilidad - 1], [sello + 1, r.debilidad - 1]);
+  if (neutrales > 0)
+    variantes.push([sello + 1, r.debilidad], [sello, r.debilidad + 1]);
+  const fragil = variantes.some(([s, d]) => lectura(s, d, r.total) !== actual);
+  return { lectura: actual, fragil, sinBase: false };
+}

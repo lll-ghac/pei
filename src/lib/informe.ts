@@ -23,6 +23,10 @@ import {
   prioridades,
   puntos,
   sintesis,
+  avisoSinSellos,
+  LECTURA,
+  notasCortes,
+  REGLA_PRIORIDADES,
   resumir,
   type Comparable,
   type FilaVista,
@@ -410,7 +414,8 @@ export async function armarInforme(opciones: {
       : 0;
 
   // ---------- Resumen ejecutivo ----------
-  const candidatos = prio.filas.filter((f) => f.candidato);
+  const convergentes = prio.filas.filter((f) => f.convergente);
+  const sinSellos = avisoSinSellos(prio.filas);
   const top3 = (c: Comparable) => {
     const { n: nc, filas } = comparar(c, urna);
     const est = (Object.keys(c.codigos) as Estamento[]).filter(
@@ -444,14 +449,14 @@ export async function armarInforme(opciones: {
       fuente,
     ]);
   pushLinea(
-    "Sellos candidatos (top 5 en 2 o más estamentos)",
-    candidatos.length
-      ? candidatos.map(
+    "Prioridades convergentes (top 5 en 2 o más estamentos) y su lectura",
+    convergentes.length
+      ? convergentes.map(
           (f) =>
-            `${f.opcion.codigo}) ${f.opcion.texto}${f.converge ? " (los 3 estamentos)" : ""}`,
+            `${f.opcion.codigo}) ${f.opcion.texto}${f.converge3 ? " (los 3 estamentos)" : ""}${f.convergenciaFragil ? " (convergencia frágil)" : ""}: ${f.lectura ? LECTURA[f.lectura].toLowerCase() : ""}${f.lecturaFragil ? " (frágil)" : ""}`,
         )
-      : ["Ninguno cumple la regla"],
-    "A9, E6, F9",
+      : ["Ninguna prioridad está en el top 5 de 2 o más estamentos"],
+    "A9–A11, E6–E8, F9–F11",
   );
   pushLinea(
     "Propósito más elegido",
@@ -613,7 +618,7 @@ export async function armarInforme(opciones: {
         {
           tipo: "nota",
           texto:
-            "Estos son datos, no conclusiones. La plataforma propone sellos candidatos con una regla fija; la decisión es siempre de la comisión.",
+            "Estos son datos, no conclusiones. La plataforma marca las prioridades convergentes y propone su lectura con una regla fija; la decisión es siempre de la comisión.",
         },
       ],
     },
@@ -718,87 +723,89 @@ export async function armarInforme(opciones: {
     {
       id: "prioridades",
       numero: "6",
-      titulo: "Prioridades y sellos candidatos",
+      titulo: "Prioridades convergentes y sellos candidatos",
       aporta: "Sellos, objetivos estratégicos y líneas de acción",
       preguntas: "A9–A13, E6–E8, F9–F13",
       bloques: [
-        {
+        ...REGLA_PRIORIDADES.map((texto): Bloque => ({
           tipo: "parrafo",
-          texto: `Regla: es sello candidato una prioridad que está entre las 5 primeras del top 3 en al menos 2 de los 3 estamentos (con ${MINIMO} respuestas o más). Si la mayoría la eligió como la más importante por ser una debilidad, se propone como objetivo de mejora y no como sello.`,
-        },
+          texto,
+        })),
+        ...(sinSellos ? [{ tipo: "nota", texto: sinSellos } as Bloque] : []),
+        ...notasCortes(prio.cortes).map((texto): Bloque => ({
+          tipo: "nota",
+          texto,
+        })),
         prio.validos.length >= 2
           ? {
               tipo: "tabla",
               titulo:
-                "Prioridades: % que la puso en su top 3 (lugar en el estamento)",
-              origen: `A9, E6, F9 · n = ${ESTAMENTOS.map((e) => `${e} ${n[e]}`).join(" · ")}`,
+                "Prioridades: % que la puso en su top 3 y lugar en cada estamento",
+              origen: `A9, E6, F9 · n = ${ESTAMENTOS.map((e) => `${e} ${n[e]}`).join(" · ")} · ⚠ = corte del top 5 frágil`,
               columnas: [
                 "Prioridad",
                 ...prio.validos.map((e) => NOMBRE[e]),
-                "Lectura",
+                "Convergencia y lectura",
               ],
               numericas: prio.validos.map((_, i) => i + 1),
-              filas: prio.filas.map((f) => {
-                const r = f.razones;
-                const mejora = r.total >= MINIMO && r.debilidad > r.total / 2;
-                return [
-                  `${f.opcion.codigo}) ${f.opcion.texto}`,
-                  ...prio.validos.map((e) =>
-                    f.por[e]
-                      ? `${fmtPct(f.por[e]!.pctTop3)} (${f.por[e]!.rango}°)`
-                      : "—",
-                  ),
-                  f.candidato
-                    ? mejora
-                      ? "Candidato a objetivo de mejora"
-                      : f.converge
-                        ? "Sello candidato · 3 estamentos"
-                        : "Sello candidato"
-                    : "",
-                ];
-              }),
+              filas: prio.filas.map((f) => [
+                `${f.opcion.codigo}) ${f.opcion.texto}`,
+                ...prio.validos.map((e) => {
+                  const c = f.por[e];
+                  if (!c) return "—";
+                  const lugar =
+                    c.lugar != null
+                      ? ` (${c.empate ? "=" : ""}${c.lugar}°${c.fragil ? " ⚠" : ""})`
+                      : "";
+                  return `${fmtPct(c.pctTop3)}${lugar}`;
+                }),
+                f.convergente
+                  ? `${f.converge3 ? "Convergente · 3 estamentos" : "Convergente"}${f.convergenciaFragil ? " ⚠" : ""} → ${f.lectura ? LECTURA[f.lectura] : ""}${f.lecturaFragil ? " ⚠" : ""}`
+                  : "",
+              ]),
             }
           : {
               tipo: "nota",
               texto: `Se necesitan al menos 2 estamentos con ${MINIMO} respuestas o más.`,
             },
-        candidatos.length
+        convergentes.length
           ? {
               tipo: "tabla",
               titulo:
-                "Por qué la eligieron como la más importante (sellos candidatos)",
-              origen: "A10–A11, E7–E8, F10–F11 · todos los estamentos juntos",
+                "Por qué la eligieron como la más importante (prioridades convergentes)",
+              origen:
+                "A10–A11, E7–E8, F10–F11 · todas las personas juntas (la regla se aplica sobre el total; no hay promedio por estamento porque en algunos nadie la eligió como la más importante)",
               columnas: [
                 "Prioridad",
-                "n",
-                "Debilidad",
-                "Fortaleza",
+                "Total",
+                "Fortaleza o distintiva",
                 "Futuro",
-                "Familias del sector",
-                "Distinguiría",
-                "Otra",
+                "Debilidad",
+                "Otras",
+                "Lectura",
               ],
-              filas: candidatos.map((f) => {
+              filas: convergentes.map((f) => {
                 const r = f.razones;
-                const p = (x: number) =>
-                  r.total >= MINIMO ? fmtPct(pct(x, r.total)) : "—";
+                const x = (k: number) =>
+                  r.total ? `${k} (${fmtPct(pct(k, r.total))})` : "—";
                 return [
                   `${f.opcion.codigo}) ${f.opcion.texto}`,
                   String(r.total),
-                  p(r.debilidad),
-                  p(r.fortaleza),
-                  p(r.futuro),
-                  p(r.sector),
-                  p(r.distinguiria),
-                  p(r.otra),
+                  x(r.fortaleza + r.distinguiria),
+                  x(r.futuro),
+                  x(r.debilidad),
+                  x(r.sector + r.otra),
+                  f.sinRazones
+                    ? "Sin razones: nadie la eligió como la más importante"
+                    : `${f.lectura ? LECTURA[f.lectura] : ""}${f.lecturaFragil ? " (frágil)" : ""}`,
                 ];
               }),
-              numericas: [1, 2, 3, 4, 5, 6, 7],
+              numericas: [1, 2, 3, 4, 5],
             }
           : {
               tipo: "nota",
               texto:
-                "Ninguna prioridad cumple todavía la regla de sello candidato.",
+                "Ninguna prioridad está en el top 5 de 2 o más estamentos.",
             },
         barras("A12", urna.A),
         barras("F12", urna.F),

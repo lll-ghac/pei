@@ -13,7 +13,10 @@ import {
   comparar,
   fechaCierre,
   filtrarFuncionarios,
+  avisoSinSellos,
+  notasCortes,
   prioridades,
+  REGLA_PRIORIDADES,
   resumir,
   sintesis,
   universo,
@@ -421,20 +424,33 @@ export default async function Resultados(
           return (
             <section className="bg-papel border border-filete p-5 space-y-3">
               <h2 className="text-[20px] font-bold">
-                Prioridades del nuevo PEI y sellos candidatos
+                Prioridades del nuevo PEI: convergentes y su lectura
               </h2>
-              <p className="text-[16px] text-grafito max-w-[85ch]">
-                A9 · E6 · F9 (top 3) y A10 · E7 · F10 (la más importante).{" "}
-                <strong className="text-tinta">Sello candidato</strong>:
-                prioridad entre las 5 primeras en al menos 2 de los 3
-                estamentos. Si la mayoría la eligió como la más importante por
-                ser una debilidad, se lee como objetivo de mejora; si por
-                fortaleza o porque distinguiría a la escuela, como sello. La
-                plataforma propone; la decisión es de la comisión.
+              <p className="text-[15px] text-grafito">
+                A9 · E6 · F9 (top 3), A10 · E7 · F10 (la más importante) y A11 ·
+                E8 · F11 (por qué).
               </p>
+              <ul className="list-disc pl-5 space-y-1 text-[15px] text-grafito max-w-[90ch]">
+                {REGLA_PRIORIDADES.map((t) => (
+                  <li key={t.slice(0, 20)}>{t}</li>
+                ))}
+              </ul>
+              {avisoSinSellos(p.filas) && (
+                <p
+                  role="note"
+                  className="border-l-4 border-timbre bg-timbre-claro px-3 py-2 text-[16px] text-tinta"
+                >
+                  {avisoSinSellos(p.filas)}
+                </p>
+              )}
+              {notasCortes(p.cortes).map((t) => (
+                <p key={t} className="text-[15px] text-tinta">
+                  {t}
+                </p>
+              ))}
               <Leyenda estamentos={p.validos} />
               {p.validos.length >= 2 ? (
-                <TablaPrioridades filas={p.filas} validos={p.validos} />
+                <TablaPrioridades filas={p.filas} validos={p.validos} n={p.n} />
               ) : (
                 <p className="text-gris-texto">
                   Se necesitan al menos 2 estamentos con {MINIMO} respuestas o

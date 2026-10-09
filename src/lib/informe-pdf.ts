@@ -79,7 +79,11 @@ class Lienzo {
   limpio(s: string, font: PDFFont) {
     const permitidos = new Set(font.getCharacterSet());
     return [
-      ...s.replace(/[≥]/g, ">=").replace(/[→]/g, "->").replace(/[✓]/g, "v"),
+      ...s
+        .replace(/[≥]/g, ">=")
+        .replace(/[→]/g, "->")
+        .replace(/[✓]/g, "v")
+        .replace(/⚠/g, "(!)"),
     ]
       .filter((ch) => permitidos.has(ch.codePointAt(0)!) || ch === " ")
       .join("");
@@ -464,7 +468,7 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
                       8.5,
                     ),
                   ),
-                ) + 10,
+                ) + 16,
               ),
             )
           : 0,

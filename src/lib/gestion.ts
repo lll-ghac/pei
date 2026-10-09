@@ -8,6 +8,7 @@ import { db, schema } from "@/db";
 import { aleatorio } from "./cripto";
 import type { Estamento } from "./encuestas";
 import { leerEstado } from "./estado";
+import { limpiarBloqueos } from "./limite";
 import { gestorActual } from "./sesion";
 
 export type Rol = "admin" | "comision";
@@ -152,6 +153,7 @@ export async function reiniciarACero(autor: string) {
       .update(schema.credenciales)
       .set({ intentosFallidos: 0, bloqueadaHasta: null })
       .where(eq(schema.credenciales.prueba, false));
+    limpiarBloqueos();
     await tx
       .insert(schema.ajustes)
       .values({
