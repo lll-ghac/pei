@@ -312,7 +312,7 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
           });
           const nE = b.n[e] ?? 0;
           L.page.drawText(
-            `n = ${nE}${nE > 0 && nE < 30 ? " (pocos casos)" : ""}`,
+            `n = ${nE}${nE > 0 && nE < 30 ? " (pocos casos)" : ""}${b.sinPreferencia.includes(e) ? " · sin preferencia clara" : ""}`,
             {
               x: x + 9,
               y: L.y - 18,
@@ -398,7 +398,7 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
           }
         });
         if (conDif && fila.dif != null) {
-          const t = `${fila.dif >= 30 ? "> " : ""}${Math.round(fila.dif)} pts`;
+          const t = `${fila.dif >= 30 ? "> " : ""}${Math.round(fila.dif)} ${Math.round(fila.dif) === 1 ? "pt" : "pts"}`;
           const fuente = fila.dif >= 30 ? f.negrita : f.normal;
           L.page.drawText(t, {
             x: M + UTIL - fuente.widthOfTextAtSize(t, 8.5),

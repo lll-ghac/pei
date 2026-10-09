@@ -21,6 +21,7 @@ import {
   filtrarFuncionarios,
   prepararComparativa,
   prioridades,
+  puntos,
   sintesis,
   resumir,
   type Comparable,
@@ -71,6 +72,7 @@ export type Bloque =
       filas: FilaVista[];
       pocos: string | null;
       n: Partial<Record<Estamento, number>>;
+      sinPreferencia: Estamento[];
     }
   | {
       tipo: "tabla";
@@ -183,6 +185,7 @@ function comparativa(
     filas: vista.filas,
     pocos: vista.pocos,
     n,
+    sinPreferencia: vista.sinPreferencia,
   };
 }
 
@@ -243,7 +246,7 @@ function brechas(urna: Record<Estamento, Respuestas[]>) {
     );
     if (est.length < 2) continue;
     for (const f of fs) {
-      const v = est.map((e) => f.pct[e] ?? 0);
+      const v = est.map((e) => Math.round(f.pct[e] ?? 0));
       const dif = Math.max(...v) - Math.min(...v);
       if (dif >= 20) {
         filas.push([
@@ -252,7 +255,7 @@ function brechas(urna: Record<Estamento, Respuestas[]>) {
           ...ESTAMENTOS.map((e) =>
             est.includes(e) ? fmtPct(f.pct[e] ?? 0) : "—",
           ),
-          `${Math.round(dif)} pts`,
+          puntos(dif),
         ]);
       }
     }
@@ -309,6 +312,7 @@ function temasPorEstamento(
     filas: vista.filas,
     pocos: vista.pocos,
     n,
+    sinPreferencia: vista.sinPreferencia,
   };
 }
 
@@ -552,7 +556,7 @@ export async function armarInforme(opciones: {
           columnas: ["Pregunta", "Opción"],
           filas: sin.coincidencias.map((c) => [
             c.pregunta,
-            `${c.opcion}${c.empate ? " (empate técnico)" : ""}`,
+            `${c.opcion}${c.empates.length ? ` (${c.empates.map((x) => `en ${NOMBRE[x.e]}, empatada con ${x.con.join(" y ")}`).join("; ")})` : ""}${c.distintaIntensidad ? ". Coincide en el lugar, no en la intensidad: también está en Diferencias grandes" : ""}`,
           ]),
         }
       : {
@@ -576,7 +580,7 @@ export async function armarInforme(opciones: {
             d.opcion,
             `${NOMBRE[d.alto[0]]} ${fmtPct(d.alto[1])}`,
             `${NOMBRE[d.bajo[0]]} ${fmtPct(d.bajo[1])}`,
-            `${Math.round(d.dif)} pts`,
+            `${puntos(d.dif)}${d.pocos ? " (pocos casos)" : ""}`,
           ]),
           numericas: [4],
         }

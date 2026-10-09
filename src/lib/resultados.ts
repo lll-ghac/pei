@@ -274,7 +274,7 @@ export function prepararComparativa(opciones: {
   n: Partial<Record<Estamento, number>>;
   ordinal?: boolean;
   orden?: Orden;
-}): { filas: FilaVista[]; pocos: string | null } {
+}): { filas: FilaVista[]; pocos: string | null; sinPreferencia: Estamento[] } {
   const { estamentos, n } = opciones;
   const conteos = opciones.filas.map((f) => {
     const c: Partial<Record<Estamento, number>> = {};
@@ -293,8 +293,9 @@ export function prepararComparativa(opciones: {
     const c = conteos.map((x) => x[e] ?? 0);
     c.forEach((v, i) => {
       // Solo cuentan como delante las opciones que le ganan por más de una persona.
+      // Una opción elegida por una sola persona no recibe lugar.
       const rango = 1 + c.filter((x) => x > v + 1).length;
-      if (v > 0 && rango <= 3) lugar[i][e] = rango;
+      if (v >= 2 && rango <= 3) lugar[i][e] = rango;
     });
     c.forEach((v, i) => {
       if (
@@ -304,13 +305,23 @@ export function prepararComparativa(opciones: {
         empate[i][e] = true;
     });
   }
+  // Si más de 3 opciones comparten un mismo lugar, el lugar ya no informa: «sin preferencia clara».
+  const sinPreferencia = estamentos.filter((e) =>
+    [1, 2, 3].some((l) => lugar.filter((x) => x[e] === l).length > 3),
+  );
+  for (const e of sinPreferencia) {
+    lugar.forEach((x) => delete x[e]);
+    empate.forEach((x) => delete x[e]);
+  }
   const prom = (f: { pct: Partial<Record<Estamento, number | null>> }) =>
     estamentos.reduce((s, e) => s + (f.pct[e] ?? 0), 0) /
     Math.max(1, estamentos.length);
   let filas: FilaVista[] = opciones.filas.map((f, i) => {
+    // Diferencia con los porcentajes redondeados que se ven, para que cuadre con la resta mental.
     const v = estamentos
       .map((e) => f.pct[e])
-      .filter((x): x is number => typeof x === "number");
+      .filter((x): x is number => typeof x === "number")
+      .map((x) => Math.round(x));
     return {
       texto: f.texto,
       pct: f.pct,
@@ -338,7 +349,7 @@ export function prepararComparativa(opciones: {
   const menores = filas.filter((f) => f.menor).length;
   if (filas.length <= 8 || menores < 3 || opciones.orden === "dif")
     filas = filas.map((f) => ({ ...f, menor: false }));
-  return { filas, pocos: avisoPocos(estamentos, n) };
+  return { filas, pocos: avisoPocos(estamentos, n), sinPreferencia };
 }
 
 /** «Pocos casos: Apoderados n = 9 (1 persona = 11 puntos)…», o null. */
@@ -359,14 +370,22 @@ export function avisoPocos(
 
 /** Síntesis neutral de las preguntas comunes: coincidencias (1° en todos) y diferencias grandes. */
 export function sintesis(urna: Record<Estamento, Respuestas[]>) {
-  const coincidencias: { pregunta: string; opcion: string; empate: boolean }[] =
-    [];
+  const coincidencias: {
+    pregunta: string;
+    opcion: string;
+    /** Estamentos donde comparte el 1° y con qué opciones. */
+    empates: { e: Estamento; con: string[] }[];
+    /** También está entre las diferencias grandes: coincide en el lugar, no en la intensidad. */
+    distintaIntensidad: boolean;
+  }[] = [];
   const diferencias: {
     pregunta: string;
     opcion: string;
     alto: [Estamento, number];
     bajo: [Estamento, number];
     dif: number;
+    /** El extremo alto o el bajo es un estamento con pocos casos. */
+    pocos: boolean;
   }[] = [];
   for (const c of COMPARABLES) {
     const { n, filas } = comparar(c, urna);
@@ -381,23 +400,35 @@ export function sintesis(urna: Record<Estamento, Respuestas[]>) {
       ordinal: c.ordinal,
     });
     for (const f of vista.filas) {
+      const esDiferencia = f.dif != null && f.dif >= BRECHA;
       if (est.every((e) => f.lugar[e] === 1)) {
         coincidencias.push({
           pregunta: c.titulo,
           opcion: f.texto,
-          empate: est.some((e) => f.empate[e]),
+          empates: est
+            .filter((e) => f.empate[e])
+            .map((e) => ({
+              e,
+              con: vista.filas
+                .filter((x) => x !== f && x.lugar[e] === 1)
+                .map((x) => x.texto),
+            })),
+          distintaIntensidad: esDiferencia,
         });
       }
-      if (f.dif != null && f.dif >= BRECHA) {
+      if (esDiferencia) {
         const orden = est
-          .map((e) => [e, f.pct[e] ?? 0] as [Estamento, number])
+          .map((e) => [e, Math.round(f.pct[e] ?? 0)] as [Estamento, number])
           .sort((a, b) => b[1] - a[1]);
+        const alto = orden[0];
+        const bajo = orden[orden.length - 1];
         diferencias.push({
           pregunta: c.titulo,
           opcion: f.texto,
-          alto: orden[0],
-          bajo: orden[orden.length - 1],
-          dif: f.dif,
+          alto,
+          bajo,
+          dif: f.dif!,
+          pocos: [alto[0], bajo[0]].some((e) => (n[e] ?? 0) < POCOS_CASOS),
         });
       }
     }
@@ -405,6 +436,10 @@ export function sintesis(urna: Record<Estamento, Respuestas[]>) {
   diferencias.sort((a, b) => b.dif - a.dif);
   return { coincidencias, diferencias };
 }
+
+/** «1 pt», «12 pts». */
+export const puntos = (x: number) =>
+  `${Math.round(x)} ${Math.round(x) === 1 ? "pt" : "pts"}`;
 
 // ---------- Prioridades y sellos candidatos ----------
 

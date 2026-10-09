@@ -87,6 +87,7 @@ export function VistaBloque({ b }: { b: Bloque }) {
             encabezado={b.encabezado}
             n={b.n}
             aviso={b.pocos}
+            sinPreferencia={b.sinPreferencia}
           />
           <Origen texto={b.origen} />
         </figure>
