@@ -2,7 +2,7 @@
 // Uso, desde la carpeta del proyecto:  npx tsx --test pruebas/lectura.test.mts
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BRECHA, esFragil, leerRazones, prepararComparativa, puntos, rankingTop5 } from "../src/lib/lectura.ts";
+import { BRECHA, esFragil, leerRazones, lugaresPorGrupo, prepararComparativa, puntos, rankingTop5 } from "../src/lib/lectura.ts";
 
 type E = "A" | "E" | "F";
 /** Arma filas a partir de cuántas personas eligieron cada opción. */
@@ -139,4 +139,19 @@ test("top 5 más corto si pocas opciones tienen 2 personas o más", () => {
   const t = rankingTop5([5, 3, 1, 1, 0]);
   assert.equal(t.conLugar, 2);
   assert.equal(t.filas[2].enTop5, false);
+});
+
+test("los empates no se encadenan: tras 3 empatadas en el 3°, la siguiente es 6°", () => {
+  // Estudiantes (revisión 9/10): a 9, b 8 → =1°; e 6, d 5, m 5 → =3°; h 4, f 4 → =6°.
+  const g = lugaresPorGrupo([9, 8, 6, 5, 5, 4, 4]);
+  assert.deepEqual(g.map((x) => x.lugar), [1, 1, 3, 3, 3, 6, 6]);
+});
+
+test("frágil solo quien está a una persona del corte: e) con 6 no, d) y m) con 5 sí", () => {
+  const t = rankingTop5([9, 8, 6, 5, 5, 4, 4]);
+  assert.deepEqual(t.filas.map((f) => f.enTop5), [true, true, true, true, true, false, false]);
+  assert.equal(t.filas[2].fragil, false, "e) con 6: las de afuera tienen 4");
+  assert.equal(t.filas[3].fragil, true, "d) con 5");
+  assert.equal(t.filas[4].fragil, true, "m) con 5");
+  assert.equal(t.filas[0].fragil, false);
 });

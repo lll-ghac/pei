@@ -127,12 +127,22 @@ export default async function Resultados(
             <span key={e}>
               {i > 0 && " · "}
               {NOMBRE[e]}: <strong className="text-tinta">{n[e]}</strong>
-              {base[e].base > 0 && (
+              {e === "A" && base.A.estimada && base.A.base > 0 ? (
+                // La matrícula cuenta estudiantes, no familias: se dice tal cual.
                 <span>
                   {" "}
-                  de {base[e].base} {base[e].texto} (
-                  {Math.round((n[e] / base[e].base) * 100)}%)
+                  familias · base: matrícula de {base.A.base} estudiantes (aún
+                  no se registran las papeletas) ·{" "}
+                  {Math.round((n.A / base.A.base) * 100)}%
                 </span>
+              ) : (
+                base[e].base > 0 && (
+                  <span>
+                    {" "}
+                    de {base[e].base} {base[e].texto} (
+                    {Math.round((n[e] / base[e].base) * 100)}%)
+                  </span>
+                )
               )}
             </span>
           ))}

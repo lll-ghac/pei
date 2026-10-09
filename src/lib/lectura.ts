@@ -61,19 +61,12 @@ export function prepararComparativa(opciones: {
     () => ({}) as Partial<Record<Estamento, boolean>>,
   );
   for (const e of estamentos) {
-    const c = conteos.map((x) => x[e] ?? 0);
-    c.forEach((v, i) => {
-      // Solo cuentan como delante las opciones que le ganan por más de una persona.
-      // Una opción elegida por una sola persona no recibe lugar.
-      const rango = 1 + c.filter((x) => x > v + 1).length;
-      if (v >= 2 && rango <= 3) lugar[i][e] = rango;
-    });
-    c.forEach((v, i) => {
-      if (
-        lugar[i][e] &&
-        c.some((x, k) => k !== i && lugar[k][e] === lugar[i][e])
-      )
-        empate[i][e] = true;
+    const grupos = lugaresPorGrupo(conteos.map((x) => x[e] ?? 0));
+    grupos.forEach((g, i) => {
+      if (g.lugar != null && g.lugar <= 3) {
+        lugar[i][e] = g.lugar;
+        empate[i][e] = g.empate;
+      }
     });
   }
   // Si más de 3 opciones comparten un mismo lugar, ese lugar ya no informa: se omite solo ese grupo
@@ -192,6 +185,38 @@ export function esFragil(opciones: {
 export const puntos = (x: number) =>
   `${Math.round(x)} ${Math.round(x) === 1 ? "pt" : "pts"}`;
 
+/**
+ * Lugares con empate técnico, por grupos (corrección 9/10): se ordenan las opciones de más a menos
+ * personas y cada grupo reúne a las que están a una persona o menos de la PRIMERA del grupo (así el
+ * empate no se encadena: 6, 5 y 4 no quedan juntos). El lugar de un grupo es 1 + cuántas opciones van
+ * antes: tras 3 empatadas en el 3°, la siguiente es 6°. Una opción elegida por menos de 2 personas no
+ * recibe lugar. Devuelve, por opción, su lugar, si empata y el tamaño de su grupo.
+ */
+export function lugaresPorGrupo(
+  conteos: number[],
+): { lugar?: number; empate: boolean; grupo: number }[] {
+  const out = conteos.map(() => ({
+    lugar: undefined as number | undefined,
+    empate: false,
+    grupo: 0,
+  }));
+  const orden = conteos
+    .map((v, i) => ({ v, i }))
+    .filter((x) => x.v >= 2)
+    .sort((a, b) => b.v - a.v);
+  let k = 0;
+  while (k < orden.length) {
+    const lider = orden[k].v;
+    let fin = k;
+    while (fin + 1 < orden.length && orden[fin + 1].v >= lider - 1) fin++;
+    const tam = fin - k + 1;
+    for (let j = k; j <= fin; j++)
+      out[orden[j].i] = { lugar: k + 1, empate: tam > 1, grupo: tam };
+    k = fin + 1;
+  }
+  return out;
+}
+
 // ---------- Prioridades: top 5 y lectura de las razones (reglas acordadas 9/10) ----------
 
 export const TOP = 5;
@@ -215,43 +240,28 @@ export function rankingTop5(conteos: number[]): {
   conLugar: number;
   corteDudoso: boolean;
 } {
-  const filas: LugarTop[] = conteos.map((v) => {
-    const rango = 1 + conteos.filter((x) => x > v + 1).length;
-    const lugar = v >= 2 ? rango : undefined;
-    return {
-      lugar,
-      empate: false,
-      enTop5: lugar != null && lugar <= TOP,
-      fragil: false,
-    };
-  });
-  filas.forEach((f, i) => {
-    if (f.lugar != null)
-      f.empate = filas.some((g, k) => k !== i && g.lugar === f.lugar);
-  });
-  // Frágil en el corte: hay una opción fuera del top 5 a una persona o menos.
+  const grupos = lugaresPorGrupo(conteos);
+  const filas: LugarTop[] = grupos.map((g) => ({
+    lugar: g.lugar,
+    empate: g.empate,
+    enTop5: g.lugar != null && g.lugar <= TOP,
+    fragil: false,
+  }));
   filas.forEach((f, i) => {
     if (!f.enTop5) return;
-    f.fragil = conteos.some(
-      (x, k) => !filas[k].enTop5 && x >= conteos[i] - 1 && x > 0,
+    // Frágil si su grupo cruza el corte del 5° lugar (entran todas las del grupo) o si alguna opción
+    // que quedó fuera está a una persona o menos de ella.
+    const cruza = grupos[i].lugar! + grupos[i].grupo - 1 > TOP;
+    const cerca = conteos.some(
+      (x, k) => !filas[k].enTop5 && x > 0 && x >= conteos[i] - 1,
     );
+    f.fragil = cruza || cerca;
   });
   const enTop = filas.filter((f) => f.enTop5).length;
-  // Empate en el corte que deja más de 5 dentro: las que quedan a una persona o menos del 5° lugar
-  // entran todas, pero frágiles.
-  if (enTop > TOP) {
-    const quinto = conteos
-      .filter((_, i) => filas[i].enTop5)
-      .sort((a, b) => b - a)[TOP - 1];
-    filas.forEach((f, i) => {
-      if (f.enTop5 && conteos[i] <= quinto + 1) f.fragil = true;
-    });
-  }
-  const corteDudoso = enTop > TOP || filas.some((f) => f.fragil);
   return {
     filas,
     conLugar: filas.filter((f) => f.lugar != null).length,
-    corteDudoso,
+    corteDudoso: enTop > TOP || filas.some((f) => f.fragil),
   };
 }
 

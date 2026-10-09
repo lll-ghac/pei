@@ -22,7 +22,7 @@ function Celda({
     <td className="px-3 py-2.5" colSpan={colSpan}>
       <div className="flex items-center gap-3">
         <span
-          className={`w-[5rem] shrink-0 text-right ${fuerte ? "font-bold" : ""}`}
+          className={`w-[6.25rem] shrink-0 text-right whitespace-nowrap ${fuerte ? "font-bold" : ""}`}
         >
           {c.usadas}
           <span className="text-gris-texto">
@@ -115,13 +115,6 @@ export function TablaAvance({
               <Celda c={totalA} fuerte />
               <Celda c={totalE} fuerte />
             </tr>
-            <tr className="border-t border-filete">
-              <th scope="row" className="px-3 py-3 text-left font-bold">
-                Funcionarios
-              </th>
-              {/* Los funcionarios no son apoderados ni estudiantes: su fila ocupa las dos columnas. */}
-              <Celda c={funcionarios} fuerte colSpan={2} />
-            </tr>
           </tbody>
           {Object.entries(NIVELES).map(([nivel, titulo]) => {
             const delNivel = filas.filter((f) => f.nivel === nivel);
@@ -152,6 +145,33 @@ export function TablaAvance({
               </tbody>
             );
           })}
+        </table>
+      </div>
+      {/* Los funcionarios no son apoderados ni estudiantes: van en un bloque aparte. */}
+      <div className="overflow-x-auto bg-papel border border-filete">
+        <table className="w-full min-w-[24rem] text-[17px]">
+          <caption className="sr-only">Respuestas de funcionarios</caption>
+          <thead>
+            <tr className="bg-tinta text-papel text-left">
+              <th
+                scope="col"
+                className="rotulo text-[14px] px-3 py-2.5 w-[28%]"
+              >
+                Funcionarios
+              </th>
+              <th scope="col" className="rotulo text-[14px] px-3 py-2.5">
+                Respondieron
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row" className="px-3 py-3 text-left font-bold">
+                Docentes y asistentes
+              </th>
+              <Celda c={funcionarios} fuerte />
+            </tr>
+          </tbody>
         </table>
       </div>
       <p className="text-[15px] text-gris-texto max-w-[75ch]">

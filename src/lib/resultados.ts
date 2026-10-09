@@ -515,7 +515,7 @@ export { ENCUESTAS, ESCALAS };
 
 /** Universo de cada estamento (mismas bases del Avance): papeletas de apoderados, matrícula de 5° a 8°, funcionarios. */
 export async function universo(): Promise<
-  Record<Estamento, { base: number; texto: string }>
+  Record<Estamento, { base: number; texto: string; estimada?: boolean }>
 > {
   const { avance } = await import("./gestion");
   const av = await avance();
@@ -524,9 +524,9 @@ export async function universo(): Promise<
   return {
     A: {
       base: sumar("apoderados"),
-      texto: av.filas.some((f) => f.apoderados.estimada)
-        ? "apoderados según matrícula (aún no se registran todas las papeletas)"
-        : "papeletas de apoderados entregadas",
+      texto: "papeletas de apoderados entregadas",
+      /** Algún curso aún no registra papeletas: la base es (en parte) la matrícula de estudiantes. */
+      estimada: av.filas.some((f) => f.apoderados.estimada),
     },
     E: { base: sumar("estudiantes"), texto: "estudiantes de 5° a 8°" },
     F: { base: av.funcionarios.base, texto: "funcionarios" },
