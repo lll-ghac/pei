@@ -150,7 +150,7 @@ function barras(
   return {
     tipo: "barras",
     titulo: opciones.titulo ?? p.texto,
-    origen: origen(codigo, quien, r.n),
+    origen: `${origen(codigo, quien, r.n)}${r.n < 30 ? " · ⚠ pocos casos: lea los porcentajes con cuidado" : ""}`,
     e,
     filas,
   };
@@ -473,13 +473,19 @@ export async function armarInforme(opciones: {
     top3(comparable("Perfil de egreso")),
     "A16, E11, F17 · promedio de estamentos",
   );
-  pushLinea(
+  lineas.push([
     "Temas más mencionados en las abiertas",
-    clasificados.length >= MINIMO
-      ? conteoTemas.map((x) => `${x.t.nombre} (${x.c} textos)`)
-      : null,
+    clasificados.length === 0
+      ? "Aún no hay clasificación cargada (Panel → Abiertas)"
+      : clasificados.length < MINIMO
+        ? `Solo ${clasificados.length} ${clasificados.length === 1 ? "texto clasificado" : "textos clasificados"}: menos de ${MINIMO}, no se informa`
+        : conteoTemas
+            .map(
+              (x) => `${x.t.nombre} (${x.c} ${x.c === 1 ? "texto" : "textos"})`,
+            )
+            .join(" · "),
     "A19–A20, E13–E14, F20–F21",
-  );
+  ]);
 
   // ---------- Insumos ----------
   const noSe: string[][] = [];
@@ -544,6 +550,36 @@ export async function armarInforme(opciones: {
       ]);
   }
 
+  // La participación también es un indicador para comparar en la próxima medición.
+  base.unshift(
+    [
+      "—",
+      "Participación: respondieron",
+      "Apoderados",
+      String(n.A),
+      partA.base ? fmtPct(pct(n.A, partA.base)) : "—",
+    ],
+    [
+      "—",
+      "Participación: respondieron",
+      "Estudiantes",
+      String(n.E),
+      partE.base ? fmtPct(pct(n.E, partE.base)) : "—",
+    ],
+    [
+      "—",
+      "Participación: respondieron",
+      "Funcionarios",
+      String(n.F),
+      partF.base ? fmtPct(pct(n.F, partF.base)) : "—",
+    ],
+  );
+  // Con menos de 30 respuestas, un valor de línea base es poco estable para comparar en el futuro.
+  for (const fila of base) {
+    const nFila = Number(fila[3]);
+    fila.push(nFila > 0 && nFila < 30 ? "⚠ pocos casos" : "");
+  }
+
   const citas = textos
     .filter((t) => t.estado === "revisado" && t.cita)
     .map((t) => ({
@@ -575,7 +611,7 @@ export async function armarInforme(opciones: {
           tipo: "tabla",
           titulo: "Diferencias grandes: 30 puntos o más entre estamentos",
           origen:
-            "Preguntas comunes a los estamentos (con 5 respuestas o más) · frágil: con una persona distinta en un estamento de pocos casos bajaría de 30 puntos",
+            "Preguntas comunes a los estamentos (con 5 respuestas o más) · ⚠ frágil: con una persona distinta en un estamento de pocos casos bajaría de 30 puntos",
           columnas: [
             "Pregunta",
             "Opción",
@@ -583,15 +619,20 @@ export async function armarInforme(opciones: {
             "Más bajo",
             "Diferencia",
           ],
-          filas: sin.diferencias.flatMap((d) =>
-            d.items.map((it) => [
-              `${d.pregunta}${d.dosEstamentos ? " (2 estamentos)" : ""}`,
-              it.opcion,
-              `${NOMBRE[it.alto[0]]} ${fmtPct(it.alto[1])}`,
-              `${NOMBRE[it.bajo[0]]} ${fmtPct(it.bajo[1])}`,
-              `${puntos(it.dif)}${it.fragil ? " (frágil)" : ""}`,
-            ]),
-          ),
+          // Una fila por diferencia; en preguntas de una sola respuesta (el lema), sus opciones juntas.
+          filas: sin.diferencias.map((d) => [
+            `${d.pregunta}${d.dosEstamentos ? " (2 estamentos)" : ""}`,
+            d.items
+              .map((it) => `${it.opcion}${it.fragil ? " ⚠" : ""}`)
+              .join(" · "),
+            d.items
+              .map((it) => `${NOMBRE[it.alto[0]]} ${fmtPct(it.alto[1])}`)
+              .join(" · "),
+            d.items
+              .map((it) => `${NOMBRE[it.bajo[0]]} ${fmtPct(it.bajo[1])}`)
+              .join(" · "),
+            d.items.map((it) => puntos(it.dif)).join(" · "),
+          ]),
           numericas: [4],
         }
       : {
@@ -922,7 +963,7 @@ export async function armarInforme(opciones: {
         nuevos.size
           ? {
               tipo: "tabla",
-              titulo: "Temas nuevos y no preguntados (T98)",
+              titulo: "Temas nuevos y no preguntados",
               origen: "Etiquetas que escribió la comisión al clasificar",
               columnas: ["Etiqueta", "Textos"],
               filas: [...nuevos]
@@ -932,7 +973,7 @@ export async function armarInforme(opciones: {
             }
           : {
               tipo: "nota",
-              texto: "No hay temas nuevos (T98) en la clasificación cargada.",
+              texto: "No hay temas nuevos en la clasificación cargada.",
             },
       ],
     },
@@ -947,8 +988,16 @@ export async function armarInforme(opciones: {
             {
               tipo: "tabla",
               titulo: "Valores de 2026 para comparar en la próxima medición",
-              origen: "Escalas: % de acuerdo o de frecuencia alta",
-              columnas: ["Código", "Indicador", "Estamento", "n", "Valor 2026"],
+              origen:
+                "Escalas: % de acuerdo (sin contar «No sé») o de frecuencia alta · Participación: sobre papeletas entregadas o matrícula · ⚠ pocos casos: menos de 30 respuestas, el valor es poco estable para comparar",
+              columnas: [
+                "Código",
+                "Indicador",
+                "Estamento",
+                "n",
+                "Valor 2026",
+                "Nota",
+              ],
               filas: base,
               numericas: [3, 4],
             },
