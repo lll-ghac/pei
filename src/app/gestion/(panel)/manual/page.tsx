@@ -201,10 +201,10 @@ export default async function ManualComision() {
           <li>
             <strong>Revisar nombres.</strong> La plataforma marca en amarillo lo
             que podría ser un nombre. Seleccione el nombre y reemplácelo por un
-            rol general ([un docente], [un estudiante]…), y guarde como
-            revisado. Los textos sin marcas igual se leen y se confirman de a
-            100. Si un texto relata una situación grave, márquelo «No publicar»:
-            la administración lo deriva al encargado de convivencia por el canal
+            rol general ([docente], [estudiante]…), y guarde como revisado. Los
+            textos sin marcas igual se leen y se confirman de a 100. Si un texto
+            relata una situación grave, márquelo «No publicar»: la
+            administración lo deriva al encargado de convivencia por el canal
             formal. El texto original no se guarda.
           </li>
           <li>

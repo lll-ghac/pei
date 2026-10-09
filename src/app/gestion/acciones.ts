@@ -6,8 +6,18 @@ import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { aleatorio, hashClave, verificarClave } from "@/lib/cripto";
 import type { Estamento } from "@/lib/encuestas";
-import { guardarContacto, guardarEstado, leerEstado, registrar } from "@/lib/estado";
-import { aplicarClasificacion, confirmarSinNombres, guardarRevision, revisarClasificacion } from "@/lib/abiertas";
+import {
+  guardarContacto,
+  guardarEstado,
+  leerEstado,
+  registrar,
+} from "@/lib/estado";
+import {
+  aplicarClasificacion,
+  confirmarSinNombres,
+  guardarRevision,
+  revisarClasificacion,
+} from "@/lib/abiertas";
 import { exigirGestor, generarLote, reiniciarACero } from "@/lib/gestion";
 import { cargarDatosPrueba } from "@/lib/datos-prueba";
 import { ipCliente, permitir } from "@/lib/limite";
@@ -15,14 +25,27 @@ import { cerrarGestion, iniciarGestion } from "@/lib/sesion";
 
 export type Aviso = { error?: string; ok?: string; clave?: string };
 
-export async function ingresarGestion(_p: Aviso, form: FormData): Promise<Aviso> {
-  if (!permitir("gestion:" + (await ipCliente()))) return { error: "Demasiados intentos. Espere un minuto." };
-  const usuario = String(form.get("usuario") ?? "").trim().toLowerCase();
+export async function ingresarGestion(
+  _p: Aviso,
+  form: FormData,
+): Promise<Aviso> {
+  if (!permitir("gestion:" + (await ipCliente())))
+    return { error: "Demasiados intentos. Espere un minuto." };
+  const usuario = String(form.get("usuario") ?? "")
+    .trim()
+    .toLowerCase();
   const clave = String(form.get("clave") ?? "");
-  const [g] = await db.select().from(schema.gestores).where(eq(schema.gestores.usuario, usuario));
+  const [g] = await db
+    .select()
+    .from(schema.gestores)
+    .where(eq(schema.gestores.usuario, usuario));
   // Se verifica siempre una clave para no revelar si el usuario existe por el tiempo de respuesta.
-  const valida = await verificarClave(clave, g?.claveHash ?? "scrypt$32768$AAAAAAAAAAAAAAAAAAAAAA==$AAAA");
-  if (!g || !g.activo || !valida) return { error: "Usuario o contraseña incorrectos." };
+  const valida = await verificarClave(
+    clave,
+    g?.claveHash ?? "scrypt$32768$AAAAAAAAAAAAAAAAAAAAAA==$AAAA",
+  );
+  if (!g || !g.activo || !valida)
+    return { error: "Usuario o contraseña incorrectos." };
   await iniciarGestion(g.id);
   await registrar(g.usuario, "Ingreso al panel");
   redirect("/gestion");
@@ -33,13 +56,21 @@ export async function salirGestion() {
   redirect("/gestion/ingreso");
 }
 
-export async function cambiarClavePropia(_p: Aviso, form: FormData): Promise<Aviso> {
+export async function cambiarClavePropia(
+  _p: Aviso,
+  form: FormData,
+): Promise<Aviso> {
   const g = await exigirGestor();
   const actual = String(form.get("actual") ?? "");
   const nueva = String(form.get("nueva") ?? "");
-  if (nueva.length < 12) return { error: "La nueva contraseña debe tener al menos 12 caracteres." };
-  if (!(await verificarClave(actual, g.claveHash))) return { error: "La contraseña actual no coincide." };
-  await db.update(schema.gestores).set({ claveHash: await hashClave(nueva) }).where(eq(schema.gestores.id, g.id));
+  if (nueva.length < 12)
+    return { error: "La nueva contraseña debe tener al menos 12 caracteres." };
+  if (!(await verificarClave(actual, g.claveHash)))
+    return { error: "La contraseña actual no coincide." };
+  await db
+    .update(schema.gestores)
+    .set({ claveHash: await hashClave(nueva) })
+    .where(eq(schema.gestores.id, g.id));
   await registrar(g.usuario, "Cambio de contraseña propia");
   return { ok: "Contraseña actualizada." };
 }
@@ -49,14 +80,24 @@ export async function cambiarClavePropia(_p: Aviso, form: FormData): Promise<Avi
 export async function guardarCurso(form: FormData) {
   const g = await exigirGestor("admin");
   const codigo = String(form.get("codigo"));
-  const matricula = Math.max(0, Math.min(99, Number(form.get("matricula")) || 0));
+  const matricula = Math.max(
+    0,
+    Math.min(99, Number(form.get("matricula")) || 0),
+  );
   const papeletasTexto = String(form.get("papeletas") ?? "").trim();
-  const papeletas = papeletasTexto === "" ? null : Math.max(0, Math.min(99, Number(papeletasTexto) || 0));
+  const papeletas =
+    papeletasTexto === ""
+      ? null
+      : Math.max(0, Math.min(99, Number(papeletasTexto) || 0));
   await db
     .update(schema.cursos)
     .set({ matricula, papeletasApoderados: papeletas, activo: matricula > 0 })
     .where(eq(schema.cursos.codigo, codigo));
-  await registrar(g.usuario, "Curso actualizado", `${codigo}: matrícula ${matricula}, papeletas apoderados ${papeletas ?? "sin registrar"}`);
+  await registrar(
+    g.usuario,
+    "Curso actualizado",
+    `${codigo}: matrícula ${matricula}, papeletas apoderados ${papeletas ?? "sin registrar"}`,
+  );
   revalidatePath("/gestion/cursos");
 }
 
@@ -76,18 +117,33 @@ export async function crearLote(_p: Aviso, form: FormData): Promise<Aviso> {
   const curso = estamento === "F" ? null : String(form.get("curso") || "");
   const cantidad = Number(form.get("cantidad"));
   const prueba = form.get("tipo") === "prueba";
-  if (!["A", "E", "F"].includes(estamento)) return { error: "Estamento no válido." };
+  if (!["A", "E", "F"].includes(estamento))
+    return { error: "Estamento no válido." };
   if (estamento !== "F" && !curso) return { error: "Elija un curso." };
   if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 300) {
     return { error: "La cantidad debe estar entre 1 y 300." };
   }
   if (estamento === "E" && curso) {
-    const [c] = await db.select().from(schema.cursos).where(eq(schema.cursos.codigo, curso));
-    if (!c?.tieneEstudiantes) return { error: "Solo 5° a 8° básico responden la encuesta de estudiantes." };
+    const [c] = await db
+      .select()
+      .from(schema.cursos)
+      .where(eq(schema.cursos.codigo, curso));
+    if (!c?.tieneEstudiantes)
+      return {
+        error: "Solo 5° a 8° básico responden la encuesta de estudiantes.",
+      };
   }
-  const lote = await generarLote({ curso, estamento, cantidad, prueba, autor: g.usuario });
+  const lote = await generarLote({
+    curso,
+    estamento,
+    cantidad,
+    prueba,
+    autor: g.usuario,
+  });
   revalidatePath("/gestion/credenciales");
-  return { ok: `Lote ${lote.id} creado con ${cantidad} credenciales. Ya puede descargar el PDF.` };
+  return {
+    ok: `Lote ${lote.id} creado con ${cantidad} credenciales. Ya puede descargar el PDF.`,
+  };
 }
 
 export async function desactivarSobrantes(form: FormData) {
@@ -110,7 +166,11 @@ export async function desactivarSobrantes(form: FormData) {
       .returning({ id: schema.credenciales.id });
     n += r.length;
   }
-  await registrar(g.usuario, "Credenciales desactivadas", `Lote ${loteId}: ${n}`);
+  await registrar(
+    g.usuario,
+    "Credenciales desactivadas",
+    `Lote ${loteId}: ${n}`,
+  );
   revalidatePath(`/gestion/credenciales/${loteId}`);
 }
 
@@ -127,7 +187,9 @@ export async function reiniciar(_p: Aviso, form: FormData): Promise<Aviso> {
     return { error: (e as Error).message };
   }
   revalidatePath("/gestion", "layout");
-  return { ok: "Reinicio a cero listo: respuestas borradas, credenciales de prueba eliminadas." };
+  return {
+    ok: "Reinicio a cero listo: respuestas borradas, credenciales de prueba eliminadas.",
+  };
 }
 
 export async function pasarAOficial(_p: Aviso, form: FormData): Promise<Aviso> {
@@ -135,18 +197,34 @@ export async function pasarAOficial(_p: Aviso, form: FormData): Promise<Aviso> {
   if (String(form.get("confirmacion")).trim() !== "OFICIAL") {
     return { error: "Escriba OFICIAL, en mayúsculas, para confirmar." };
   }
-  const [{ n: respuestas }] = await db.select({ n: count() }).from(schema.respuestas);
+  const [{ n: respuestas }] = await db
+    .select({ n: count() })
+    .from(schema.respuestas);
   const [{ n: deprueba }] = await db
     .select({ n: count() })
     .from(schema.credenciales)
     .where(eq(schema.credenciales.prueba, true));
   if (respuestas > 0 || deprueba > 0) {
-    return { error: "Antes de pasar a Oficial haga el reinicio a cero: aún hay respuestas o credenciales de prueba." };
+    return {
+      error:
+        "Antes de pasar a Oficial haga el reinicio a cero: aún hay respuestas o credenciales de prueba.",
+    };
   }
-  await guardarEstado({ modo: "oficial", abierta: false, cerrada: false, publicados: false });
-  await registrar(g.usuario, "Paso a modo Oficial", "Reinicio bloqueado desde ahora");
+  await guardarEstado({
+    modo: "oficial",
+    abierta: false,
+    cerrada: false,
+    publicados: false,
+  });
+  await registrar(
+    g.usuario,
+    "Paso a modo Oficial",
+    "Reinicio bloqueado desde ahora",
+  );
   revalidatePath("/", "layout");
-  return { ok: "La plataforma está en modo Oficial. Abra el periodo cuando la comisión lo indique." };
+  return {
+    ok: "La plataforma está en modo Oficial. Abra el periodo cuando la comisión lo indique.",
+  };
 }
 
 export async function cambiarPeriodo(form: FormData) {
@@ -155,7 +233,10 @@ export async function cambiarPeriodo(form: FormData) {
   if (estado.modo !== "oficial" || estado.cerrada) return;
   const abrir = form.get("accion") === "abrir";
   await guardarEstado({ abierta: abrir });
-  await registrar(g.usuario, abrir ? "Apertura del periodo oficial" : "Cierre del periodo oficial");
+  await registrar(
+    g.usuario,
+    abrir ? "Apertura del periodo oficial" : "Cierre del periodo oficial",
+  );
   revalidatePath("/", "layout");
 }
 
@@ -163,20 +244,33 @@ export async function cambiarPeriodo(form: FormData) {
 
 export async function crearCuenta(_p: Aviso, form: FormData): Promise<Aviso> {
   const g = await exigirGestor("admin");
-  const usuario = String(form.get("usuario") ?? "").trim().toLowerCase();
+  const usuario = String(form.get("usuario") ?? "")
+    .trim()
+    .toLowerCase();
   const nombre = String(form.get("nombre") ?? "").trim();
   const rol = form.get("rol") === "admin" ? "admin" : "comision";
   if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) {
-    return { error: "El usuario debe tener entre 3 y 30 letras minúsculas, números, punto o guion." };
+    return {
+      error:
+        "El usuario debe tener entre 3 y 30 letras minúsculas, números, punto o guion.",
+    };
   }
   if (!nombre) return { error: "Escriba el nombre de la persona." };
-  const [existe] = await db.select().from(schema.gestores).where(eq(schema.gestores.usuario, usuario));
+  const [existe] = await db
+    .select()
+    .from(schema.gestores)
+    .where(eq(schema.gestores.usuario, usuario));
   if (existe) return { error: "Ese usuario ya existe." };
   const clave = aleatorio(4) + "-" + aleatorio(4) + "-" + aleatorio(4);
-  await db.insert(schema.gestores).values({ usuario, nombre, rol, claveHash: await hashClave(clave) });
+  await db
+    .insert(schema.gestores)
+    .values({ usuario, nombre, rol, claveHash: await hashClave(clave) });
   await registrar(g.usuario, "Cuenta creada", `${usuario} (${rol})`);
   revalidatePath("/gestion/sistema");
-  return { ok: `Cuenta "${usuario}" creada. Entregue esta contraseña en persona; no se volverá a mostrar:`, clave };
+  return {
+    ok: `Cuenta "${usuario}" creada. Entregue esta contraseña en persona; no se volverá a mostrar:`,
+    clave,
+  };
 }
 
 export async function cambiarCuenta(form: FormData) {
@@ -189,16 +283,25 @@ export async function cambiarCuenta(form: FormData) {
     .set({ activo })
     .where(eq(schema.gestores.id, id))
     .returning({ usuario: schema.gestores.usuario });
-  if (c) await registrar(g.usuario, activo ? "Cuenta reactivada" : "Cuenta dada de baja", c.usuario);
+  if (c)
+    await registrar(
+      g.usuario,
+      activo ? "Cuenta reactivada" : "Cuenta dada de baja",
+      c.usuario,
+    );
   revalidatePath("/gestion/sistema");
 }
 
 /** Asigna una contraseña nueva a otra cuenta (olvido o entrega). Se muestra una sola vez. */
-export async function restablecerClave(_p: Aviso, form: FormData): Promise<Aviso> {
+export async function restablecerClave(
+  _p: Aviso,
+  form: FormData,
+): Promise<Aviso> {
   const g = await exigirGestor("admin");
   const id = Number(form.get("id"));
   if (!id) return { error: "Elija una cuenta." };
-  if (id === g.id) return { error: "Su propia contraseña se cambia en Mi cuenta." };
+  if (id === g.id)
+    return { error: "Su propia contraseña se cambia en Mi cuenta." };
   const clave = aleatorio(4) + "-" + aleatorio(4) + "-" + aleatorio(4);
   const [c] = await db
     .update(schema.gestores)
@@ -207,7 +310,10 @@ export async function restablecerClave(_p: Aviso, form: FormData): Promise<Aviso
     .returning({ usuario: schema.gestores.usuario });
   if (!c) return { error: "Esa cuenta no existe." };
   await registrar(g.usuario, "Contraseña nueva asignada", c.usuario);
-  return { ok: `Contraseña nueva para "${c.usuario}". Entréguela en persona; no se volverá a mostrar:`, clave };
+  return {
+    ok: `Contraseña nueva para "${c.usuario}". Entréguela en persona; no se volverá a mostrar:`,
+    clave,
+  };
 }
 
 // ----- Observaciones de la comisión sobre las encuestas -----
@@ -216,9 +322,18 @@ export async function agregarObservacion(form: FormData) {
   const g = await exigirGestor();
   const estamento = String(form.get("estamento"));
   const pregunta = String(form.get("pregunta"));
-  const texto = String(form.get("texto") ?? "").trim().slice(0, 2000);
-  if (!["A", "E", "F"].includes(estamento) || !/^(intro|[AEF]\d{1,2})$/.test(pregunta) || !texto) return;
-  await db.insert(schema.observaciones).values({ estamento, pregunta, autorId: g.id, texto });
+  const texto = String(form.get("texto") ?? "")
+    .trim()
+    .slice(0, 2000);
+  if (
+    !["A", "E", "F"].includes(estamento) ||
+    !/^(intro|[AEF]\d{1,2})$/.test(pregunta) ||
+    !texto
+  )
+    return;
+  await db
+    .insert(schema.observaciones)
+    .values({ estamento, pregunta, autorId: g.id, texto });
   revalidatePath("/gestion/encuestas", "layout");
 }
 
@@ -226,12 +341,17 @@ export async function cambiarObservacion(form: FormData) {
   const g = await exigirGestor();
   const id = Number(form.get("id"));
   const accion = String(form.get("accion"));
-  const [obs] = await db.select().from(schema.observaciones).where(eq(schema.observaciones.id, id));
+  const [obs] = await db
+    .select()
+    .from(schema.observaciones)
+    .where(eq(schema.observaciones.id, id));
   if (!obs) return;
   if (accion === "eliminar") {
     // Solo quien la escribió o administración.
     if (obs.autorId !== g.id && g.rol !== "admin") return;
-    await db.delete(schema.observaciones).where(eq(schema.observaciones.id, id));
+    await db
+      .delete(schema.observaciones)
+      .where(eq(schema.observaciones.id, id));
   } else if (g.rol === "admin") {
     const resuelta = accion === "resolver";
     await db
@@ -245,7 +365,10 @@ export async function cambiarObservacion(form: FormData) {
 // ----- Cierre y resultados -----
 
 /** Cierra la encuesta: nadie más puede responder y se abren los resultados para la comisión. */
-export async function cerrarEncuesta(_p: Aviso, form: FormData): Promise<Aviso> {
+export async function cerrarEncuesta(
+  _p: Aviso,
+  form: FormData,
+): Promise<Aviso> {
   const g = await exigirGestor("admin");
   if (String(form.get("confirmacion")).trim() !== "CERRAR") {
     return { error: "Escriba CERRAR, en mayúsculas, para confirmar." };
@@ -255,11 +378,15 @@ export async function cerrarEncuesta(_p: Aviso, form: FormData): Promise<Aviso> 
   await guardarEstado({ cerrada: true, abierta: false });
   await registrar(
     g.usuario,
-    estado.modo === "prueba" ? "Cierre de ensayo (modo Prueba)" : "Cierre de la encuesta oficial",
+    estado.modo === "prueba"
+      ? "Cierre de ensayo (modo Prueba)"
+      : "Cierre de la encuesta oficial",
     "Respuestas detenidas; resultados abiertos para la comisión",
   );
   revalidatePath("/", "layout");
-  return { ok: "Encuesta cerrada. Los resultados ya están en Panel → Resultados." };
+  return {
+    ok: "Encuesta cerrada. Los resultados ya están en Panel → Resultados.",
+  };
 }
 
 /** Solo en modo Prueba: vuelve a permitir respuestas para seguir ensayando. */
@@ -276,11 +403,18 @@ export async function reabrirPrueba() {
 export async function sembrarPrueba(): Promise<Aviso> {
   const g = await exigirGestor("admin");
   const estado = await leerEstado();
-  if (estado.modo !== "prueba") return { error: "Solo se puede en modo Prueba." };
+  if (estado.modo !== "prueba")
+    return { error: "Solo se puede en modo Prueba." };
   const n = await cargarDatosPrueba();
-  await registrar(g.usuario, "Respuestas de prueba generadas", `${n} respuestas al azar (modo Prueba)`);
+  await registrar(
+    g.usuario,
+    "Respuestas de prueba generadas",
+    `${n} respuestas al azar (modo Prueba)`,
+  );
   revalidatePath("/", "layout");
-  return { ok: `Se agregaron ${n} respuestas de prueba. Véalas en Resultados y en Abiertas.` };
+  return {
+    ok: `Se agregaron ${n} respuestas de prueba. Véalas en Resultados y en Abiertas.`,
+  };
 }
 
 // ----- Respuestas abiertas: revisión de nombres -----
@@ -291,7 +425,8 @@ export async function guardarTexto(form: FormData) {
   if (!estado.cerrada && estado.modo !== "prueba") return;
   const id = String(form.get("id") ?? "");
   const texto = String(form.get("texto") ?? "");
-  const accion = form.get("accion") === "no_publicar" ? "no_publicar" : "revisado";
+  const accion =
+    form.get("accion") === "no_publicar" ? "no_publicar" : "revisado";
   if (!/^[0-9a-f-]{36}$/.test(id) || !texto.trim()) return;
   await guardarRevision(id, texto, accion);
   revalidatePath("/gestion/abiertas");
@@ -301,7 +436,10 @@ export async function confirmarRevisados(form: FormData) {
   const g = await exigirGestor();
   const estado = await leerEstado();
   if (!estado.cerrada && estado.modo !== "prueba") return;
-  const ids = form.getAll("id").map(String).filter((x) => /^[0-9a-f-]{36}$/.test(x));
+  const ids = form
+    .getAll("id")
+    .map(String)
+    .filter((x) => /^[0-9a-f-]{36}$/.test(x));
   const n = await confirmarSinNombres(ids, estado.modo === "prueba");
   if (n) await registrar(g.usuario, "Textos revisados sin nombres", String(n));
   revalidatePath("/gestion/abiertas");
@@ -320,9 +458,49 @@ export async function guardarPersonal(form: FormData) {
   ].slice(0, 400);
   await db.transaction(async (tx) => {
     await tx.delete(schema.nombresPersonal);
-    if (nombres.length) await tx.insert(schema.nombresPersonal).values(nombres.map((nombre) => ({ nombre })));
+    if (nombres.length)
+      await tx
+        .insert(schema.nombresPersonal)
+        .values(nombres.map((nombre) => ({ nombre })));
   });
-  await registrar(g.usuario, "Lista del personal actualizada", `${nombres.length} nombres`);
+  await registrar(
+    g.usuario,
+    "Lista del personal actualizada",
+    `${nombres.length} nombres`,
+  );
+  revalidatePath("/gestion/abiertas");
+}
+
+/** Cargos únicos (uno por línea): se marcan como posible identificación en Abiertas. */
+export async function guardarCargos(form: FormData) {
+  const g = await exigirGestor("admin");
+  const restablecer = form.get("accion") === "restablecer";
+  const lista = restablecer
+    ? null
+    : [
+        ...new Set(
+          String(form.get("cargos") ?? "")
+            .split(/\r?\n/)
+            .map((x) => x.trim().replace(/\s+/g, " "))
+            .filter((x) => x.length >= 3 && x.length <= 60),
+        ),
+      ].slice(0, 100);
+  if (lista) {
+    await db
+      .insert(schema.ajustes)
+      .values({ clave: "cargos", valor: { lista } })
+      .onConflictDoUpdate({
+        target: schema.ajustes.clave,
+        set: { valor: { lista } },
+      });
+  } else {
+    await db.delete(schema.ajustes).where(eq(schema.ajustes.clave, "cargos"));
+  }
+  await registrar(
+    g.usuario,
+    "Lista de cargos únicos actualizada",
+    lista ? `${lista.length} cargos` : "lista inicial",
+  );
   revalidatePath("/gestion/abiertas");
 }
 
@@ -335,18 +513,30 @@ export async function borrarPersonal() {
 
 // ----- Respuestas abiertas: importar clasificación y temas -----
 
-export type AvisoImportacion = Aviso & { resumen?: { filas: number; sinClasificar: number; porTema: [string, number][] }; contenido?: string };
+export type AvisoImportacion = Aviso & {
+  resumen?: {
+    filas: number;
+    sinClasificar: number;
+    porTema: [string, number][];
+  };
+  contenido?: string;
+};
 
 /** Paso 1 revisa el archivo y muestra un resumen; paso 2 (confirmar) lo aplica. Cada carga reemplaza la anterior. */
-export async function importarClasificacion(_p: AvisoImportacion, form: FormData): Promise<AvisoImportacion> {
+export async function importarClasificacion(
+  _p: AvisoImportacion,
+  form: FormData,
+): Promise<AvisoImportacion> {
   const g = await exigirGestor();
   const estado = await leerEstado();
-  if (!estado.cerrada && estado.modo !== "prueba") return { error: "La encuesta no está cerrada." };
+  if (!estado.cerrada && estado.modo !== "prueba")
+    return { error: "La encuesta no está cerrada." };
   const prueba = estado.modo === "prueba";
   let contenido = String(form.get("contenido") ?? "");
   const archivo = form.get("archivo");
   if (!contenido && archivo instanceof File && archivo.size > 0) {
-    if (archivo.size > 3_000_000) return { error: "El archivo es demasiado grande (máximo 3 MB)." };
+    if (archivo.size > 3_000_000)
+      return { error: "El archivo es demasiado grande (máximo 3 MB)." };
     contenido = await archivo.text();
   }
   if (!contenido) return { error: "Elija el archivo con la clasificación." };
@@ -362,10 +552,18 @@ export async function importarClasificacion(_p: AvisoImportacion, form: FormData
     porTema: Object.entries(r.porTema).sort((a, b) => b[1] - a[1]),
   };
   if (form.get("confirmar") !== "si") {
-    return { ok: "Archivo válido. Revise el resumen y confirme la carga.", resumen, contenido };
+    return {
+      ok: "Archivo válido. Revise el resumen y confirme la carga.",
+      resumen,
+      contenido,
+    };
   }
   await aplicarClasificacion(r.filas, prueba);
-  await registrar(g.usuario, "Clasificación de abiertas cargada", `${r.filas.length} textos; reemplaza la carga anterior`);
+  await registrar(
+    g.usuario,
+    "Clasificación de abiertas cargada",
+    `${r.filas.length} textos; reemplaza la carga anterior`,
+  );
   revalidatePath("/gestion", "layout");
   return { ok: `Clasificación cargada: ${r.filas.length} textos.` };
 }
@@ -373,19 +571,37 @@ export async function importarClasificacion(_p: AvisoImportacion, form: FormData
 export async function guardarTema(form: FormData) {
   const g = await exigirGestor("admin");
   const codigo = String(form.get("codigo") ?? "");
-  const nombre = String(form.get("nombre") ?? "").trim().slice(0, 80);
-  const descripcion = String(form.get("descripcion") ?? "").trim().slice(0, 200);
+  const nombre = String(form.get("nombre") ?? "")
+    .trim()
+    .slice(0, 80);
+  const descripcion = String(form.get("descripcion") ?? "")
+    .trim()
+    .slice(0, 200);
   if (!nombre) return;
   if (codigo) {
-    await db.update(schema.temas).set({ nombre, descripcion }).where(eq(schema.temas.codigo, codigo));
+    await db
+      .update(schema.temas)
+      .set({ nombre, descripcion })
+      .where(eq(schema.temas.codigo, codigo));
     await registrar(g.usuario, "Tema editado", `${codigo}: ${nombre}`);
   } else {
     // Código siguiente: T19, T20… (T98 y T99 quedan reservados).
-    const usados = (await db.select({ c: schema.temas.codigo, o: schema.temas.orden }).from(schema.temas)).map((x) => x);
+    const usados = (
+      await db
+        .select({ c: schema.temas.codigo, o: schema.temas.orden })
+        .from(schema.temas)
+    ).map((x) => x);
     const nums = usados.map((x) => Number(x.c.slice(1))).filter((x) => x < 98);
     const nuevo = `T${String(Math.max(18, ...nums) + 1).padStart(2, "0")}`;
     if (Number(nuevo.slice(1)) >= 98) return;
-    await db.insert(schema.temas).values({ codigo: nuevo, nombre, descripcion, orden: Math.max(...usados.map((x) => x.o)) + 1 });
+    await db
+      .insert(schema.temas)
+      .values({
+        codigo: nuevo,
+        nombre,
+        descripcion,
+        orden: Math.max(...usados.map((x) => x.o)) + 1,
+      });
     await registrar(g.usuario, "Tema agregado", `${nuevo}: ${nombre}`);
   }
   revalidatePath("/gestion/abiertas");
@@ -395,20 +611,32 @@ export async function cambiarTema(form: FormData) {
   const g = await exigirGestor("admin");
   const codigo = String(form.get("codigo") ?? "");
   const activo = form.get("accion") === "activar";
-  await db.update(schema.temas).set({ activo }).where(eq(schema.temas.codigo, codigo));
-  await registrar(g.usuario, activo ? "Tema reactivado" : "Tema desactivado", codigo);
+  await db
+    .update(schema.temas)
+    .set({ activo })
+    .where(eq(schema.temas.codigo, codigo));
+  await registrar(
+    g.usuario,
+    activo ? "Tema reactivado" : "Tema desactivado",
+    codigo,
+  );
   revalidatePath("/gestion/abiertas");
 }
 
 // ----- Huellas digitales -----
 
-const fechaHuella = new Intl.DateTimeFormat("es-CL", { timeZone: "America/Santiago", dateStyle: "long", timeStyle: "short" });
+const fechaHuella = new Intl.DateTimeFormat("es-CL", {
+  timeZone: "America/Santiago",
+  dateStyle: "long",
+  timeStyle: "short",
+});
 
 /** Busca en la bitácora una huella SHA-256 calculada en el navegador (el archivo no se sube). */
 export async function verificarHuella(codigo: string): Promise<Aviso> {
   await exigirGestor();
   const h = codigo.trim().toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(h)) return { error: "No se pudo calcular la huella del archivo." };
+  if (!/^[0-9a-f]{64}$/.test(h))
+    return { error: "No se pudo calcular la huella del archivo." };
   const [fila] = await db
     .select()
     .from(schema.bitacora)
@@ -430,12 +658,22 @@ export async function verificarHuella(codigo: string): Promise<Aviso> {
 /** Texto de contacto que ve cada participante en «Ayuda». Vacío = texto por defecto. */
 export async function guardarAyuda(_p: Aviso, form: FormData): Promise<Aviso> {
   const g = await exigirGestor("admin");
-  const texto = String(form.get("contacto") ?? "").replace(/\r\n/g, "\n").trim();
+  const texto = String(form.get("contacto") ?? "")
+    .replace(/\r\n/g, "\n")
+    .trim();
   if (texto.length > 400) return { error: "Máximo 400 caracteres." };
   await guardarContacto(texto);
-  await registrar(g.usuario, "Texto de contacto de Ayuda actualizado", texto ? texto.slice(0, 120) : "(texto por defecto)");
+  await registrar(
+    g.usuario,
+    "Texto de contacto de Ayuda actualizado",
+    texto ? texto.slice(0, 120) : "(texto por defecto)",
+  );
   revalidatePath("/", "layout");
-  return { ok: texto ? "Guardado. Ya aparece en la Ayuda de la encuesta." : "Se volvió al texto por defecto." };
+  return {
+    ok: texto
+      ? "Guardado. Ya aparece en la Ayuda de la encuesta."
+      : "Se volvió al texto por defecto.",
+  };
 }
 
 // ----- Página pública de resultados -----
@@ -448,7 +686,9 @@ export async function cambiarPublicacion(form: FormData) {
   await guardarEstado({ publicados: publicar });
   await registrar(
     g.usuario,
-    publicar ? "Resultados publicados para la comunidad" : "Página pública de resultados retirada",
+    publicar
+      ? "Resultados publicados para la comunidad"
+      : "Página pública de resultados retirada",
     estado.modo === "prueba" ? "Modo Prueba (datos de prueba)" : undefined,
   );
   revalidatePath("/", "layout");
