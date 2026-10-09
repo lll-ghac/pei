@@ -244,34 +244,39 @@ export default async function Resultados(
                     </h3>
                     <p className="text-[14px] text-grafito mb-1.5">
                       {BRECHA} puntos o más entre estamentos.{" "}
-                      <span className="text-lacre font-bold">⚠</span>: depende
-                      de un estamento con pocos casos.
+                      <span className="text-lacre font-bold">⚠</span>: frágil,
+                      con una persona distinta en un estamento de pocos casos
+                      bajaría de {BRECHA} puntos.
                     </p>
                     {sin.diferencias.length ? (
-                      <ul className="space-y-1 text-[16px]">
+                      <ul className="space-y-1.5 text-[16px]">
                         {sin.diferencias.map((d) => (
-                          <li key={d.pregunta + d.opcion}>
-                            <strong>{d.opcion}</strong>{" "}
-                            <span className="tabular-nums">
-                              ({NOMBRE[d.alto[0]]} {d.alto[1]}% /{" "}
-                              {NOMBRE[d.bajo[0]]} {d.bajo[1]}%)
-                            </span>
-                            {d.pocos && (
-                              <span
-                                className="text-lacre font-bold"
-                                title="Depende de un estamento con pocos casos"
-                              >
-                                {" "}
-                                ⚠
-                                <span className="sr-only">
-                                  {" "}
-                                  depende de un estamento con pocos casos
+                          <li key={d.pregunta + d.items[0].opcion}>
+                            {d.items.map((it, k) => (
+                              <span key={it.opcion}>
+                                {k > 0 && (
+                                  <span className="text-grafito"> · </span>
+                                )}
+                                <strong>{it.opcion}</strong>{" "}
+                                <span className="tabular-nums">
+                                  ({NOMBRE[it.alto[0]]} {it.alto[1]}% /{" "}
+                                  {NOMBRE[it.bajo[0]]} {it.bajo[1]}%)
                                 </span>
+                                {it.fragil && (
+                                  <span
+                                    className="text-lacre font-bold"
+                                    title={`Frágil: con una persona distinta bajaría de ${BRECHA} puntos`}
+                                  >
+                                    {" "}
+                                    ⚠<span className="sr-only"> frágil</span>
+                                  </span>
+                                )}
                               </span>
-                            )}
+                            ))}
                             <span className="text-grafito">
                               {" "}
                               · {d.pregunta}
+                              {d.dosEstamentos && " (2 estamentos)"}
                             </span>
                           </li>
                         ))}

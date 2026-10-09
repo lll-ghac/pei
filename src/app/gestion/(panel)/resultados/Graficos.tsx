@@ -343,8 +343,8 @@ export function TablaComparativaVista({
       )}
       {conDif && estamentos.length === 2 && (
         <p className="text-[14px] text-grafito">
-          Diferencia entre 2 estamentos: no se compara igual que en las
-          preguntas de 3.
+          Aquí la diferencia compara solo 2 estamentos; en las demás preguntas
+          compara 3, por eso tiende a ser mayor allá.
         </p>
       )}
       {conLeyenda ? (

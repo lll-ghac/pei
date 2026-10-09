@@ -567,7 +567,8 @@ export async function armarInforme(opciones: {
       ? {
           tipo: "tabla",
           titulo: "Diferencias grandes: 30 puntos o más entre estamentos",
-          origen: "Preguntas comunes a los estamentos (con 5 respuestas o más)",
+          origen:
+            "Preguntas comunes a los estamentos (con 5 respuestas o más) · frágil: con una persona distinta en un estamento de pocos casos bajaría de 30 puntos",
           columnas: [
             "Pregunta",
             "Opción",
@@ -575,13 +576,15 @@ export async function armarInforme(opciones: {
             "Más bajo",
             "Diferencia",
           ],
-          filas: sin.diferencias.map((d) => [
-            d.pregunta,
-            d.opcion,
-            `${NOMBRE[d.alto[0]]} ${fmtPct(d.alto[1])}`,
-            `${NOMBRE[d.bajo[0]]} ${fmtPct(d.bajo[1])}`,
-            `${puntos(d.dif)}${d.pocos ? " (pocos casos)" : ""}`,
-          ]),
+          filas: sin.diferencias.flatMap((d) =>
+            d.items.map((it) => [
+              `${d.pregunta}${d.dosEstamentos ? " (2 estamentos)" : ""}`,
+              it.opcion,
+              `${NOMBRE[it.alto[0]]} ${fmtPct(it.alto[1])}`,
+              `${NOMBRE[it.bajo[0]]} ${fmtPct(it.bajo[1])}`,
+              `${puntos(it.dif)}${it.fragil ? " (frágil)" : ""}`,
+            ]),
+          ),
           numericas: [4],
         }
       : {

@@ -305,13 +305,22 @@ export function prepararComparativa(opciones: {
         empate[i][e] = true;
     });
   }
-  // Si más de 3 opciones comparten un mismo lugar, el lugar ya no informa: «sin preferencia clara».
-  const sinPreferencia = estamentos.filter((e) =>
-    [1, 2, 3].some((l) => lugar.filter((x) => x[e] === l).length > 3),
-  );
-  for (const e of sinPreferencia) {
-    lugar.forEach((x) => delete x[e]);
-    empate.forEach((x) => delete x[e]);
+  // Si más de 3 opciones comparten un mismo lugar, ese lugar ya no informa: se omite solo ese grupo
+  // (un 1° claro se mantiene aunque haya un empate múltiple en el 2°). Si el empate es en el 1°, el
+  // estamento queda «sin preferencia clara».
+  const sinPreferencia: Estamento[] = [];
+  for (const e of estamentos) {
+    for (const l of [1, 2, 3]) {
+      const grupo = lugar.filter((x) => x[e] === l);
+      if (grupo.length <= 3) continue;
+      lugar.forEach((x, i) => {
+        if (x[e] === l) {
+          delete x[e];
+          delete empate[i][e];
+        }
+      });
+      if (l === 1) sinPreferencia.push(e);
+    }
   }
   const prom = (f: { pct: Partial<Record<Estamento, number | null>> }) =>
     estamentos.reduce((s, e) => s + (f.pct[e] ?? 0), 0) /
@@ -368,6 +377,15 @@ export function avisoPocos(
     : null;
 }
 
+export type DiferenciaGrande = {
+  opcion: string;
+  alto: [Estamento, number];
+  bajo: [Estamento, number];
+  dif: number;
+  /** Frágil: con una persona distinta en un estamento de pocos casos, bajaría de BRECHA. */
+  fragil: boolean;
+};
+
 /** Síntesis neutral de las preguntas comunes: coincidencias (1° en todos) y diferencias grandes. */
 export function sintesis(urna: Record<Estamento, Respuestas[]>) {
   const coincidencias: {
@@ -378,14 +396,14 @@ export function sintesis(urna: Record<Estamento, Respuestas[]>) {
     /** También está entre las diferencias grandes: coincide en el lugar, no en la intensidad. */
     distintaIntensidad: boolean;
   }[] = [];
+  /**
+   * Una línea por diferencia; en preguntas de una sola respuesta (el lema) las opciones de la misma
+   * pregunta van juntas, porque son dos caras de la misma brecha.
+   */
   const diferencias: {
     pregunta: string;
-    opcion: string;
-    alto: [Estamento, number];
-    bajo: [Estamento, number];
-    dif: number;
-    /** El extremo alto o el bajo es un estamento con pocos casos. */
-    pocos: boolean;
+    dosEstamentos: boolean;
+    items: DiferenciaGrande[];
   }[] = [];
   for (const c of COMPARABLES) {
     const { n, filas } = comparar(c, urna);
@@ -399,6 +417,7 @@ export function sintesis(urna: Record<Estamento, Respuestas[]>) {
       n,
       ordinal: c.ordinal,
     });
+    const items: DiferenciaGrande[] = [];
     for (const f of vista.filas) {
       const esDiferencia = f.dif != null && f.dif >= BRECHA;
       if (est.every((e) => f.lugar[e] === 1)) {
@@ -416,24 +435,47 @@ export function sintesis(urna: Record<Estamento, Respuestas[]>) {
           distintaIntensidad: esDiferencia,
         });
       }
-      if (esDiferencia) {
-        const orden = est
-          .map((e) => [e, Math.round(f.pct[e] ?? 0)] as [Estamento, number])
-          .sort((a, b) => b[1] - a[1]);
-        const alto = orden[0];
-        const bajo = orden[orden.length - 1];
+      if (!esDiferencia) continue;
+      const redondeado = (e: Estamento) => Math.round(f.pct[e] ?? 0);
+      const orden = est
+        .map((e) => [e, redondeado(e)] as [Estamento, number])
+        .sort((a, b) => b[1] - a[1]);
+      const alto = orden[0];
+      const bajo = orden[orden.length - 1];
+      // ¿Bajaría de BRECHA si una persona del extremo con pocos casos hubiera respondido distinto?
+      const fragil = (
+        [
+          [alto[0], -1],
+          [bajo[0], +1],
+        ] as [Estamento, number][]
+      ).some(([e, cambio]) => {
+        const nE = n[e] ?? 0;
+        if (nE >= POCOS_CASOS || f.conteo[e] == null) return false;
+        const nuevo = Math.round(
+          (((f.conteo[e] as number) + cambio) / nE) * 100,
+        );
+        const v = est.map((x) => (x === e ? nuevo : redondeado(x)));
+        return Math.max(...v) - Math.min(...v) < BRECHA;
+      });
+      items.push({ opcion: f.texto, alto, bajo, dif: f.dif!, fragil });
+    }
+    if (c.ordinal && items.length)
+      diferencias.push({
+        pregunta: c.titulo,
+        dosEstamentos: est.length === 2,
+        items,
+      });
+    else
+      for (const it of items)
         diferencias.push({
           pregunta: c.titulo,
-          opcion: f.texto,
-          alto,
-          bajo,
-          dif: f.dif!,
-          pocos: [alto[0], bajo[0]].some((e) => (n[e] ?? 0) < POCOS_CASOS),
+          dosEstamentos: est.length === 2,
+          items: [it],
         });
-      }
-    }
   }
-  diferencias.sort((a, b) => b.dif - a.dif);
+  const mayor = (d: { items: DiferenciaGrande[] }) =>
+    Math.max(...d.items.map((x) => x.dif));
+  diferencias.sort((a, b) => mayor(b) - mayor(a));
   return { coincidencias, diferencias };
 }
 
