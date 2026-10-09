@@ -11,7 +11,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { enviarEncuesta } from "../acciones";
+import type { ResultadoEnvio } from "../acciones";
 import { Urna } from "@/components/Urna";
 import { ESCALAS } from "@/lib/encuestas/listas";
 import {
@@ -211,7 +211,16 @@ export function Formulario({ estamento, curso, vistaPrevia = false }: Props) {
               : Array.from(crypto.getRandomValues(new Uint8Array(16)), (x) =>
                   x.toString(16).padStart(2, "0"),
                 ).join("");
-          const r = await enviarEncuesta(respuestas, envioId.current);
+          // Dirección fija (no una acción de servidor): sigue funcionando aunque se publique una versión nueva
+          // mientras la persona responde.
+          const res = await fetch("/encuesta/depositar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ respuestas, envioId: envioId.current }),
+            credentials: "same-origin",
+          });
+          if (!res.ok && res.status >= 500) throw new Error(`servidor ${res.status}`);
+          const r = (await res.json()) as ResultadoEnvio;
           if (r.ok) {
             enviado.current = true;
             setRespuestas({});

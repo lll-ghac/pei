@@ -84,15 +84,10 @@ export default function () {
 
   // 4. Responder (tiempo al azar) y depositar
   if (PENSAR > 0) sleep(Math.random() * PENSAR);
+  // Depositar: dirección fija /encuesta/depositar (JSON), igual que el navegador desde el 9/10.
   const datos = JSON.parse(cap.envio.body);
-  datos[1] = uuid();
-  const envio = http.post(`${BASE}/encuesta`, JSON.stringify(datos), {
-    headers: {
-      "Next-Action": cap.envio.headers["next-action"],
-      "Next-Router-State-Tree": cap.envio.headers["next-router-state-tree"],
-      "Content-Type": "text/plain;charset=UTF-8",
-      Accept: "text/x-component",
-    },
+  const envio = http.post(`${BASE}/encuesta/depositar`, JSON.stringify({ respuestas: datos[0], envioId: uuid() }), {
+    headers: { "Content-Type": "application/json", Origin: BASE },
     tags: { paso: "envio" },
   });
   tEnvio.add(envio.timings.duration);

@@ -76,6 +76,12 @@ for (const e of ["A", "E", "F"]) {
   const p = await ctx.newPage();
   p.on("request", (r) => {
     if (r.method() !== "POST") return;
+    if (r.url().endsWith("/encuesta/depositar")) {
+      // Desde el 9/10 se deposita en una dirección fija (JSON); se guarda como [respuestas, envioId].
+      const d = JSON.parse(r.postData() ?? "{}");
+      (capturas[e] ??= {}).envio = { url: "/encuesta/depositar", headers: r.headers(), body: JSON.stringify([d.respuestas, d.envioId]) };
+      return;
+    }
     const h = r.headers();
     if (!h["next-action"]) return;
     const tipo = r.url().includes("/encuesta") ? "envio" : "ingreso";
