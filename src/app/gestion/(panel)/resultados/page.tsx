@@ -257,11 +257,8 @@ export default async function Resultados(
                                 {k > 0 && (
                                   <span className="text-grafito"> · </span>
                                 )}
-                                <strong>{it.opcion}</strong>{" "}
-                                <span className="tabular-nums">
-                                  ({NOMBRE[it.alto[0]]} {it.alto[1]}% /{" "}
-                                  {NOMBRE[it.bajo[0]]} {it.bajo[1]}%)
-                                </span>
+                                <strong>{it.opcion}</strong>
+                                {/* El ⚠ va pegado a la opción: en una línea agrupada marca solo la frágil. */}
                                 {it.fragil && (
                                   <span
                                     className="text-lacre font-bold"
@@ -270,7 +267,11 @@ export default async function Resultados(
                                     {" "}
                                     ⚠<span className="sr-only"> frágil</span>
                                   </span>
-                                )}
+                                )}{" "}
+                                <span className="tabular-nums">
+                                  ({NOMBRE[it.alto[0]]} {it.alto[1]}% /{" "}
+                                  {NOMBRE[it.bajo[0]]} {it.bajo[1]}%)
+                                </span>
                               </span>
                             ))}
                             <span className="text-grafito">
@@ -310,8 +311,9 @@ export default async function Resultados(
                     elegida por una sola persona no recibe lugar.
                   </li>
                   <li>
-                    «Sin preferencia clara»: más de 3 opciones comparten un
-                    lugar en ese estamento, así que no se marcan lugares.
+                    Si más de 3 opciones empatan en el 1° lugar, el estamento
+                    muestra «sin preferencia clara». Si el empate es en otro
+                    lugar, solo ese grupo queda sin lugar.
                   </li>
                   <li>
                     Diferencia: puntos entre el estamento más alto y el más
