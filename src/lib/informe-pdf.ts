@@ -245,7 +245,12 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
         const yMedio = L.y - h / 2;
         L.barra(M + colTexto, yMedio, colBarra - 34, fila.pct, C.serie[b.e]);
         L.page.drawText(`${Math.round(fila.pct)}%`, {
-          x: M + colTexto + colBarra - 28,
+          // Cifra pegada a la punta de la barra (misma escala de 0 a 100% en toda la columna).
+          x:
+            M +
+            colTexto +
+            Math.max(1.5, (Math.min(100, fila.pct) / 100) * (colBarra - 34)) +
+            3,
           y: yMedio - 3,
           size: 9,
           font: f.normal,
@@ -274,10 +279,14 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
     case "comparativa": {
       titulo(b.titulo);
       if (b.pocos) L.texto(b.pocos, { size: 8.5, color: C.lacre });
-      const colTexto = UTIL * 0.34;
-      const colE = (UTIL - colTexto) / b.estamentos.length;
+      const conDif = b.estamentos.length >= 2;
+      const colDif = conDif ? 40 : 0;
+      const colTexto = UTIL * 0.3;
+      const colE = (UTIL - colTexto - colDif) / b.estamentos.length;
+      // Misma escala en toda la columna: se reserva el espacio de la cifra y el lugar.
+      const anchoBarra = colE - 52;
       const cabecera = () => {
-        L.espacio(14);
+        L.espacio(22);
         L.page.drawText(L.limpio(b.encabezado.toUpperCase(), f.negrita), {
           x: M,
           y: L.y - 9,
@@ -301,8 +310,29 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
             font: f.negrita,
             color: C.grafito,
           });
+          const nE = b.n[e] ?? 0;
+          L.page.drawText(
+            `n = ${nE}${nE > 0 && nE < 30 ? " (pocos casos)" : ""}`,
+            {
+              x: x + 9,
+              y: L.y - 18,
+              size: 7,
+              font: nE < 30 ? f.negrita : f.normal,
+              color: nE < 30 ? C.lacre : C.gris,
+            },
+          );
         });
-        L.y -= 14;
+        if (conDif) {
+          const t = "DIFERENCIA";
+          L.page.drawText(t, {
+            x: M + UTIL - f.negrita.widthOfTextAtSize(t, 7),
+            y: L.y - 9,
+            size: 7,
+            font: f.negrita,
+            color: C.grafito,
+          });
+        }
+        L.y -= 22;
       };
       cabecera();
       L.alCortar = cabecera;
@@ -323,7 +353,7 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
         b.estamentos.forEach((e, i) => {
           const x = M + colTexto + i * colE;
           const v = fila.pct[e];
-          if (v == null)
+          if (v == null) {
             L.page.drawText("Menos de 5", {
               x,
               y: yMedio - 3,
@@ -331,26 +361,53 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
               font: f.normal,
               color: C.gris,
             });
-          else {
-            const lugar = fila.lugar[e];
-            L.barra(x, yMedio, colE - 50, v, C.serie[e]);
-            if (lugar)
-              L.page.drawText(`${lugar}°`, {
-                x: x + colE - 46,
-                y: yMedio - 3,
-                size: 7.5,
-                font: f.negrita,
-                color: C.timbre,
-              });
-            L.page.drawText(`${Math.round(v)}%`, {
-              x: x + colE - 32,
-              y: yMedio - 3,
-              size: 9,
-              font: lugar ? f.negrita : f.normal,
-              color: C.tinta,
+            return;
+          }
+          const lugar = fila.lugar[e];
+          L.barra(x, yMedio, anchoBarra, v, C.serie[e]);
+          // Cifra pegada a la punta de la barra; el lugar, a continuación.
+          const xv =
+            x + Math.max(1.5, (Math.min(100, v) / 100) * anchoBarra) + 3;
+          const cifra = `${Math.round(v)}%`;
+          const fuente = lugar ? f.negrita : f.normal;
+          L.page.drawText(cifra, {
+            x: xv,
+            y: yMedio - 3,
+            size: 9,
+            font: fuente,
+            color: C.tinta,
+          });
+          if (lugar) {
+            const t = `${fila.empate[e] ? "=" : ""}${lugar}°`;
+            const xl = xv + fuente.widthOfTextAtSize(cifra, 9) + 3;
+            const w = f.negrita.widthOfTextAtSize(t, 7.5) + 4;
+            L.page.drawRectangle({
+              x: xl,
+              y: yMedio - 4.5,
+              width: w,
+              height: 10,
+              color: C.timbre,
+            });
+            L.page.drawText(t, {
+              x: xl + 2,
+              y: yMedio - 2.5,
+              size: 7.5,
+              font: f.negrita,
+              color: rgb(1, 1, 1),
             });
           }
         });
+        if (conDif && fila.dif != null) {
+          const t = `${fila.dif >= 30 ? "> " : ""}${Math.round(fila.dif)} pts`;
+          const fuente = fila.dif >= 30 ? f.negrita : f.normal;
+          L.page.drawText(t, {
+            x: M + UTIL - fuente.widthOfTextAtSize(t, 8.5),
+            y: yMedio - 3,
+            size: 8.5,
+            font: fuente,
+            color: fila.dif >= 30 ? C.lacre : C.grafito,
+          });
+        }
         L.page.drawLine({
           start: { x: M, y: L.y - h },
           end: { x: M + UTIL, y: L.y - h },
@@ -365,11 +422,14 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
       if (menores.length) {
         L.texto(
           `Menos de 10% en todos los estamentos: ${menores.map((x) => x.texto).join(" · ")} (detalle en el Anexo D).`,
-          { size: 8, color: C.grafito },
+          {
+            size: 8,
+            color: C.grafito,
+          },
         );
       }
       L.texto(
-        "1° 2° 3°: las opciones más elegidas por cada estamento (los empates comparten lugar).",
+        `Barras de 0 a 100%. 1° 2° 3°: las más elegidas por cada estamento; «=1°»: empate técnico (una persona o menos).${conDif ? " Diferencia: puntos entre el estamento más alto y el más bajo; en rojo desde 30." : ""}`,
         { size: 8, color: C.gris },
       );
       origen(b.origen);

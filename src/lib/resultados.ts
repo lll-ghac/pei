@@ -1,5 +1,5 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { desc, eq, like } from "drizzle-orm";
 import { db, schema } from "@/db";
 import {
   ENCUESTAS,
@@ -235,64 +235,175 @@ export function comparar(c: Comparable, urna: Record<Estamento, Respuestas[]>) {
 
 /** Bajo este n, los porcentajes saltan mucho: una persona pesa varios puntos. */
 export const POCOS_CASOS = 30;
+/** Diferencia entre estamentos (en puntos) que se marca y entra en la síntesis. */
+export const BRECHA = 30;
 /** Listas largas: se recogen las opciones bajo este % en todos los estamentos. */
 const BAJO = 10;
+
+const NOMBRE_E: Record<Estamento, string> = {
+  A: "Apoderados",
+  E: "Estudiantes",
+  F: "Funcionarios",
+};
+
+export type Orden = "promedio" | "dif" | Estamento;
 
 export type FilaVista = {
   texto: string;
   pct: Partial<Record<Estamento, number | null>>;
-  /** Lugar (1, 2 o 3) de la opción dentro de cada estamento; los empates comparten lugar. */
+  /** Personas que la eligieron, por estamento (para «6 de 9 personas»). */
+  conteo: Partial<Record<Estamento, number>>;
+  /** Lugar (1, 2 o 3) dentro de cada estamento. */
   lugar: Partial<Record<Estamento, number>>;
+  /** Empate técnico: comparte el lugar con otra opción que está a una persona o menos. */
+  empate: Partial<Record<Estamento, boolean>>;
+  /** Diferencia máxima entre estamentos, en puntos (null si hay menos de 2 estamentos). */
+  dif: number | null;
   /** Fila menor (bajo 10% en todos y sin lugar): va en «Ver todas». */
   menor: boolean;
 };
 
+/**
+ * Prepara una comparación para leerla: personas, lugar 1°–3° con empate técnico (se separan por una
+ * persona o menos), diferencia entre estamentos, orden y filas menores. Promedio = simple entre
+ * estamentos, nunca por persona, para que un estamento grande no pese más que los otros.
+ */
 export function prepararComparativa(opciones: {
   filas: { texto: string; pct: Partial<Record<Estamento, number | null>> }[];
   estamentos: Estamento[];
   n: Partial<Record<Estamento, number>>;
   ordinal?: boolean;
+  orden?: Orden;
 }): { filas: FilaVista[]; pocos: string | null } {
   const { estamentos, n } = opciones;
+  const conteos = opciones.filas.map((f) => {
+    const c: Partial<Record<Estamento, number>> = {};
+    for (const e of estamentos)
+      if (f.pct[e] != null)
+        c[e] = Math.round(((f.pct[e] as number) * (n[e] ?? 0)) / 100);
+    return c;
+  });
   const lugar = opciones.filas.map(
     () => ({}) as Partial<Record<Estamento, number>>,
   );
+  const empate = opciones.filas.map(
+    () => ({}) as Partial<Record<Estamento, boolean>>,
+  );
   for (const e of estamentos) {
-    const valores = opciones.filas.map((f) => f.pct[e] ?? 0);
-    valores.forEach((v, i) => {
-      const rango = 1 + valores.filter((x) => x > v).length;
+    const c = conteos.map((x) => x[e] ?? 0);
+    c.forEach((v, i) => {
+      // Solo cuentan como delante las opciones que le ganan por más de una persona.
+      const rango = 1 + c.filter((x) => x > v + 1).length;
       if (v > 0 && rango <= 3) lugar[i][e] = rango;
+    });
+    c.forEach((v, i) => {
+      if (
+        lugar[i][e] &&
+        c.some((x, k) => k !== i && lugar[k][e] === lugar[i][e])
+      )
+        empate[i][e] = true;
     });
   }
   const prom = (f: { pct: Partial<Record<Estamento, number | null>> }) =>
     estamentos.reduce((s, e) => s + (f.pct[e] ?? 0), 0) /
     Math.max(1, estamentos.length);
-  let filas: FilaVista[] = opciones.filas.map((f, i) => ({
-    texto: f.texto,
-    pct: f.pct,
-    lugar: lugar[i],
-    menor:
-      !opciones.ordinal &&
-      estamentos.every((e) => (f.pct[e] ?? 0) < BAJO) &&
-      Object.keys(lugar[i]).length === 0,
-  }));
-  if (!opciones.ordinal) filas = filas.sort((a, b) => prom(b) - prom(a));
+  let filas: FilaVista[] = opciones.filas.map((f, i) => {
+    const v = estamentos
+      .map((e) => f.pct[e])
+      .filter((x): x is number => typeof x === "number");
+    return {
+      texto: f.texto,
+      pct: f.pct,
+      conteo: conteos[i],
+      lugar: lugar[i],
+      empate: empate[i],
+      dif: v.length >= 2 ? Math.max(...v) - Math.min(...v) : null,
+      menor:
+        !opciones.ordinal &&
+        estamentos.every((e) => (f.pct[e] ?? 0) < BAJO) &&
+        Object.keys(lugar[i]).length === 0,
+    };
+  });
+  if (!opciones.ordinal) {
+    const orden = opciones.orden ?? "promedio";
+    const clave = (f: FilaVista) =>
+      orden === "promedio"
+        ? prom(f)
+        : orden === "dif"
+          ? (f.dif ?? -1)
+          : (f.pct[orden] ?? -1);
+    filas = filas.sort((a, b) => clave(b) - clave(a));
+  }
   // Solo se recoge si la lista es larga y se esconden al menos 3; si no, se muestran todas.
   const menores = filas.filter((f) => f.menor).length;
-  if (filas.length <= 8 || menores < 3)
+  if (filas.length <= 8 || menores < 3 || opciones.orden === "dif")
     filas = filas.map((f) => ({ ...f, menor: false }));
+  return { filas, pocos: avisoPocos(estamentos, n) };
+}
+
+/** «Pocos casos: Apoderados n = 9 (1 persona = 11 puntos)…», o null. */
+export function avisoPocos(
+  estamentos: Estamento[],
+  n: Partial<Record<Estamento, number>>,
+): string | null {
   const pocos = estamentos
     .filter((e) => (n[e] ?? 0) > 0 && (n[e] ?? 0) < POCOS_CASOS)
     .map(
       (e) =>
-        `${e === "A" ? "Apoderados" : e === "E" ? "Estudiantes" : "Funcionarios"} n = ${n[e]} (1 persona = ${Math.round(100 / n[e]!)} puntos)`,
+        `${NOMBRE_E[e]} n = ${n[e]} (1 persona = ${Math.round(100 / n[e]!)} puntos)`,
     );
-  return {
-    filas,
-    pocos: pocos.length
-      ? `Pocos casos: ${pocos.join(" · ")}. Lea los porcentajes con cuidado.`
-      : null,
-  };
+  return pocos.length
+    ? `Pocos casos: ${pocos.join(" · ")}. Lea los porcentajes con cuidado.`
+    : null;
+}
+
+/** Síntesis neutral de las preguntas comunes: coincidencias (1° en todos) y diferencias grandes. */
+export function sintesis(urna: Record<Estamento, Respuestas[]>) {
+  const coincidencias: { pregunta: string; opcion: string; empate: boolean }[] =
+    [];
+  const diferencias: {
+    pregunta: string;
+    opcion: string;
+    alto: [Estamento, number];
+    bajo: [Estamento, number];
+    dif: number;
+  }[] = [];
+  for (const c of COMPARABLES) {
+    const { n, filas } = comparar(c, urna);
+    const est = (Object.keys(c.codigos) as Estamento[]).filter(
+      (e) => (n[e] ?? 0) >= MINIMO,
+    );
+    if (est.length < 2) continue;
+    const vista = prepararComparativa({
+      filas: filas.map((f) => ({ texto: f.opcion.texto, pct: f.pct })),
+      estamentos: est,
+      n,
+      ordinal: c.ordinal,
+    });
+    for (const f of vista.filas) {
+      if (est.every((e) => f.lugar[e] === 1)) {
+        coincidencias.push({
+          pregunta: c.titulo,
+          opcion: f.texto,
+          empate: est.some((e) => f.empate[e]),
+        });
+      }
+      if (f.dif != null && f.dif >= BRECHA) {
+        const orden = est
+          .map((e) => [e, f.pct[e] ?? 0] as [Estamento, number])
+          .sort((a, b) => b[1] - a[1]);
+        diferencias.push({
+          pregunta: c.titulo,
+          opcion: f.texto,
+          alto: orden[0],
+          bajo: orden[orden.length - 1],
+          dif: f.dif,
+        });
+      }
+    }
+  }
+  diferencias.sort((a, b) => b.dif - a.dif);
+  return { coincidencias, diferencias };
 }
 
 // ---------- Prioridades y sellos candidatos ----------
@@ -428,3 +539,31 @@ function promedioRango(f: FilaPrioridad) {
 }
 
 export { ENCUESTAS, ESCALAS };
+
+// ---------- Contexto de lectura: representatividad y trazabilidad ----------
+
+/** Universo de cada estamento (mismas bases del Avance): papeletas de apoderados, matrícula de 5° a 8°, funcionarios. */
+export async function universo(): Promise<
+  Record<Estamento, { base: number; texto: string }>
+> {
+  const { avance } = await import("./gestion");
+  const av = await avance();
+  const sumar = (k: "apoderados" | "estudiantes") =>
+    av.filas.reduce((t, f) => t + (f[k]?.base ?? 0), 0);
+  return {
+    A: { base: sumar("apoderados"), texto: "papeletas de apoderados" },
+    E: { base: sumar("estudiantes"), texto: "estudiantes de 5° a 8°" },
+    F: { base: av.funcionarios.base, texto: "funcionarios" },
+  };
+}
+
+/** Fecha del último cierre registrado en la bitácora (o null si la encuesta no se ha cerrado). */
+export async function fechaCierre(): Promise<Date | null> {
+  const [fila] = await db
+    .select({ fecha: schema.bitacora.fecha })
+    .from(schema.bitacora)
+    .where(like(schema.bitacora.accion, "Cierre%"))
+    .orderBy(desc(schema.bitacora.id))
+    .limit(1);
+  return fila?.fecha ?? null;
+}

@@ -85,7 +85,8 @@ export function VistaBloque({ b }: { b: Bloque }) {
             filas={b.filas}
             estamentos={b.estamentos}
             encabezado={b.encabezado}
-            pocos={b.pocos}
+            n={b.n}
+            aviso={b.pocos}
           />
           <Origen texto={b.origen} />
         </figure>

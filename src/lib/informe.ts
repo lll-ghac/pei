@@ -21,6 +21,7 @@ import {
   filtrarFuncionarios,
   prepararComparativa,
   prioridades,
+  sintesis,
   resumir,
   type Comparable,
   type FilaVista,
@@ -69,6 +70,7 @@ export type Bloque =
       /** Ya preparadas: orden, lugar 1°–3° por estamento y filas menores (ver prepararComparativa). */
       filas: FilaVista[];
       pocos: string | null;
+      n: Partial<Record<Estamento, number>>;
     }
   | {
       tipo: "tabla";
@@ -180,6 +182,7 @@ function comparativa(
     estamentos: est,
     filas: vista.filas,
     pocos: vista.pocos,
+    n,
   };
 }
 
@@ -305,6 +308,7 @@ function temasPorEstamento(
     estamentos: est,
     filas: vista.filas,
     pocos: vista.pocos,
+    n,
   };
 }
 
@@ -536,6 +540,52 @@ export async function armarInforme(opciones: {
       origen: `${t.pregunta} · ${NOMBRE[t.estamento]}`,
     }));
 
+  // Síntesis neutral: lo que comparten los estamentos y donde más difieren.
+  const sin = sintesis(urna);
+  const bloquesSintesis: Bloque[] = [
+    sin.coincidencias.length
+      ? {
+          tipo: "tabla",
+          titulo:
+            "Coincidencias: la misma opción es la primera en todos los estamentos",
+          origen: "Preguntas comunes a los estamentos (con 5 respuestas o más)",
+          columnas: ["Pregunta", "Opción"],
+          filas: sin.coincidencias.map((c) => [
+            c.pregunta,
+            `${c.opcion}${c.empate ? " (empate técnico)" : ""}`,
+          ]),
+        }
+      : {
+          tipo: "nota",
+          texto: "Ninguna opción es la primera en todos los estamentos.",
+        },
+    sin.diferencias.length
+      ? {
+          tipo: "tabla",
+          titulo: "Diferencias grandes: 30 puntos o más entre estamentos",
+          origen: "Preguntas comunes a los estamentos (con 5 respuestas o más)",
+          columnas: [
+            "Pregunta",
+            "Opción",
+            "Más alto",
+            "Más bajo",
+            "Diferencia",
+          ],
+          filas: sin.diferencias.map((d) => [
+            d.pregunta,
+            d.opcion,
+            `${NOMBRE[d.alto[0]]} ${fmtPct(d.alto[1])}`,
+            `${NOMBRE[d.bajo[0]]} ${fmtPct(d.bajo[1])}`,
+            `${Math.round(d.dif)} pts`,
+          ]),
+          numericas: [4],
+        }
+      : {
+          tipo: "nota",
+          texto: "No hay diferencias de 30 puntos o más entre estamentos.",
+        },
+  ];
+
   const secciones: Seccion[] = [
     {
       id: "resumen",
@@ -550,6 +600,7 @@ export async function armarInforme(opciones: {
           columnas: ["Qué", "Lo que respondió la comunidad", "Origen"],
           filas: lineas,
         },
+        ...bloquesSintesis,
         {
           tipo: "nota",
           texto:

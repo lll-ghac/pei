@@ -4,12 +4,15 @@
 import type { Estamento } from "@/lib/encuestas";
 import { ESCALAS } from "@/lib/encuestas/listas";
 import {
+  BRECHA,
+  POCOS_CASOS,
   prepararComparativa,
   type ConteoItem,
   type ConteoOpcion,
   type FilaComparable,
   type FilaPrioridad,
   type FilaVista,
+  type Orden,
 } from "@/lib/resultados";
 
 export const NOMBRE: Record<Estamento, string> = {
@@ -45,45 +48,52 @@ export function Leyenda({ estamentos }: { estamentos: Estamento[] }) {
   );
 }
 
-/** Barra horizontal con su valor en la punta. Con `lugar` (1 a 3), la cifra va en negrita con su lugar. */
+/**
+ * Barra horizontal de 0 a 100% con la cifra pegada a su punta (skill de visualización). Todas las barras de
+ * una columna usan la misma escala: se reserva el mismo espacio para la cifra en cada fila.
+ * Con `lugar` (1 a 3) la cifra va en negrita con su lugar; `empate` lo marca como «=1°».
+ * `personas` agrega «6 de 9 personas» al título y para lectores de pantalla.
+ */
 export function Barra({
   valor,
   e,
   etiqueta,
   lugar,
+  empate,
+  personas,
 }: {
   valor: number;
   e: Estamento;
   etiqueta?: string;
   lugar?: number;
+  empate?: boolean;
+  personas?: string;
 }) {
+  const ancho = Math.max(valor > 0 ? 0.6 : 0, Math.min(100, valor)) / 100;
   return (
-    <div className="flex items-center gap-2 min-w-0" title={etiqueta}>
+    <div
+      className="relative flex items-center h-[22px] min-w-10 border-l border-grafito"
+      title={personas ? `${etiqueta ?? ""} · ${personas}` : etiqueta}
+    >
       <span
-        className="relative h-[14px] flex-1 min-w-10 border-l border-grafito"
+        className="h-[14px] shrink-0 rounded-r-[4px]"
+        style={{ width: `calc((100% - 5.75rem) * ${ancho})`, background: `var(--serie-${e})` }}
         aria-hidden
-      >
-        <span
-          className="absolute inset-y-0 left-0 rounded-r-[4px]"
-          style={{
-            width: `${Math.max(valor > 0 ? 1.5 : 0, Math.min(100, valor))}%`,
-            background: `var(--serie-${e})`,
-          }}
-        />
-      </span>
-      <span
-        className={`shrink-0 text-right text-[16px] text-tinta tabular-nums ${lugar ? "w-[4.25rem] font-bold" : "w-11"}`}
-      >
-        {lugar && (
-          <span
-            className="mr-1 text-[12px] text-timbre"
-            aria-label={`lugar ${lugar}`}
-          >
-            {lugar}°
-          </span>
-        )}
+      />
+      <span className={`ml-1.5 shrink-0 text-[16px] text-tinta tabular-nums ${lugar ? "font-bold" : ""}`}>
         {fmt(valor)}
+        {personas && <span className="sr-only"> ({personas})</span>}
       </span>
+      {lugar && (
+        <span
+          className="ml-1.5 shrink-0 rounded-[3px] bg-timbre px-1 text-[13px] font-bold leading-[1.35] text-white"
+          title={empate ? "Empate técnico: se separa de otra opción por una persona o menos" : undefined}
+        >
+          <span className="sr-only">lugar </span>
+          {empate ? "=" : ""}
+          {lugar}°
+        </span>
+      )}
     </div>
   );
 }
@@ -136,9 +146,13 @@ export function BarrasOpciones({
 function FilasComparativa({
   filas,
   estamentos,
+  n,
+  conDif,
 }: {
   filas: FilaVista[];
   estamentos: Estamento[];
+  n: Partial<Record<Estamento, number>>;
+  conDif: boolean;
 }) {
   return (
     <>
@@ -156,11 +170,29 @@ function FilasComparativa({
                   valor={f.pct[e]!}
                   e={e}
                   lugar={f.lugar[e]}
+                  empate={f.empate[e]}
+                  personas={f.conteo[e] != null && n[e] ? `${f.conteo[e]} de ${n[e]} personas` : undefined}
                   etiqueta={`${NOMBRE[e]} · ${f.texto}: ${fmt(f.pct[e]!)}`}
                 />
               )}
             </td>
           ))}
+          {conDif && (
+            <td className="py-1.5 pl-2 text-right tabular-nums whitespace-nowrap text-[15px]">
+              {f.dif == null ? (
+                ""
+              ) : f.dif >= BRECHA ? (
+                <strong className="text-tinta" title={`Diferencia de ${BRECHA} puntos o más entre estamentos`}>
+                  <span aria-hidden className="text-lacre mr-1">
+                    ▲
+                  </span>
+                  {Math.round(f.dif)} pts
+                </strong>
+              ) : (
+                <span className="text-grafito">{Math.round(f.dif)} pts</span>
+              )}
+            </td>
+          )}
         </tr>
       ))}
     </>
@@ -168,82 +200,100 @@ function FilasComparativa({
 }
 
 /**
- * Comparación entre estamentos, ya preparada (prepararComparativa): orden, lugar 1°–3° de cada estamento,
- * filas menores recogidas en «Ver todas» y aviso de pocos casos. La usan Resultados, Informe y la página pública.
+ * Comparación entre estamentos, ya preparada (prepararComparativa): cifra pegada a la barra, lugar 1°–3°
+ * (con empate técnico), personas, diferencia entre estamentos, filas menores recogidas y marca ⚠ junto al n
+ * de un estamento con pocos casos. La usan Resultados, Informe y la página pública.
+ * `aviso`: el texto de pocos casos dentro de la tarjeta (en Resultados va una sola vez arriba de la pestaña).
  */
 export function TablaComparativaVista({
   filas,
   estamentos,
+  n,
   encabezado = "Opción",
-  pocos,
+  aviso,
 }: {
   filas: FilaVista[];
   estamentos: Estamento[];
+  n: Partial<Record<Estamento, number>>;
   encabezado?: string;
-  pocos?: string | null;
+  aviso?: string | null;
 }) {
   const principales = filas.filter((f) => !f.menor);
   const menores = filas.filter((f) => f.menor);
+  const conDif = estamentos.length >= 2;
   const cabecera = (
     <thead>
-      <tr className="text-left">
-        <th
-          scope="col"
-          className="rotulo text-[13px] text-grafito pb-1.5 pr-3 w-[34%]"
-        >
+      <tr className="text-left align-bottom">
+        <th scope="col" className="rotulo text-[13px] text-grafito pb-1.5 pr-3 w-[32%]">
           {encabezado}
         </th>
-        {estamentos.map((e) => (
-          <th
-            key={e}
-            scope="col"
-            className="rotulo text-[13px] text-grafito pb-1.5 px-2"
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <Muestra e={e} /> {NOMBRE[e]}
-            </span>
+        {estamentos.map((e) => {
+          const pocos = (n[e] ?? 0) > 0 && (n[e] ?? 0) < POCOS_CASOS;
+          return (
+            <th key={e} scope="col" className="rotulo text-[13px] text-grafito pb-1.5 px-2">
+              <span className="inline-flex items-center gap-1.5">
+                <Muestra e={e} /> {NOMBRE[e]}
+              </span>
+              <span className="block normal-case font-normal tracking-normal text-[13px]">
+                n = {n[e] ?? 0}
+                {pocos && (
+                  <span className="ml-1 text-lacre font-bold" title="Pocos casos: menos de 30 respuestas">
+                    ⚠<span className="sr-only"> pocos casos</span>
+                  </span>
+                )}
+              </span>
+            </th>
+          );
+        })}
+        {conDif && (
+          <th scope="col" className="rotulo text-[13px] text-grafito pb-1.5 pl-2 text-right">
+            Diferencia
           </th>
-        ))}
+        )}
       </tr>
     </thead>
   );
   return (
     <div className="space-y-2">
-      {pocos && (
-        <p
-          role="note"
-          className="border-l-4 border-ocre-claro bg-ocre-claro/60 px-3 py-1.5 text-[15px] text-tinta"
-        >
-          {pocos}
+      {aviso && (
+        <p role="note" className="border-l-4 border-ocre-claro bg-ocre-claro/60 px-3 py-1.5 text-[15px] text-tinta">
+          {aviso}
         </p>
       )}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[36rem] text-[16px]">
+      <div className="relative overflow-x-auto">
+        <table className="w-full min-w-[40rem] text-[16px]">
           {cabecera}
           <tbody>
-            <FilasComparativa filas={principales} estamentos={estamentos} />
+            <FilasComparativa filas={principales} estamentos={estamentos} n={n} conDif={conDif} />
           </tbody>
         </table>
       </div>
       {menores.length > 0 && (
         <details className="group">
           <summary className="cursor-pointer text-[15px] text-timbre underline">
-            Ver {menores.length} opciones más (menos de 10% en todos los
-            estamentos)
+            Ver {menores.length} opciones más (menos de 10% en todos los estamentos)
           </summary>
-          <div className="overflow-x-auto mt-1">
-            <table className="w-full min-w-[36rem] text-[16px]">
+          <div className="relative overflow-x-auto mt-1">
+            <table className="w-full min-w-[40rem] text-[16px]">
               {cabecera}
               <tbody>
-                <FilasComparativa filas={menores} estamentos={estamentos} />
+                <FilasComparativa filas={menores} estamentos={estamentos} n={n} conDif={conDif} />
               </tbody>
             </table>
           </div>
         </details>
       )}
-      <p className="text-[14px] text-gris-texto">
-        <span className="text-timbre font-bold">1° 2° 3°</span>: las opciones
-        más elegidas por cada estamento (los empates comparten lugar).
+      <p className="text-[14px] text-grafito">
+        Barras de 0 a 100%. <strong className="text-tinta">1° 2° 3°</strong>: las más elegidas por cada estamento;
+        «=1°» es empate técnico (se separan por una persona o menos).
+        {conDif && (
+          <>
+            {" "}
+            Diferencia: puntos entre el estamento más alto y el más bajo; <span className="text-lacre">▲</span> desde{" "}
+            {BRECHA}.
+          </>
+        )}{" "}
+        Pase el mouse o toque una barra para ver cuántas personas son.
       </p>
     </div>
   );
@@ -255,26 +305,33 @@ export function TablaComparativa({
   estamentos,
   n,
   ordinal,
+  orden,
   encabezado = "Opción",
+  conAviso = true,
 }: {
   filas: FilaComparable[];
   estamentos: Estamento[];
   n: Partial<Record<Estamento, number>>;
   ordinal?: boolean;
+  orden?: Orden;
   encabezado?: string;
+  /** false cuando la página ya muestra el aviso de pocos casos una sola vez arriba. */
+  conAviso?: boolean;
 }) {
   const vista = prepararComparativa({
     filas: filas.map((f) => ({ texto: f.opcion.texto, pct: f.pct })),
     estamentos,
     n,
     ordinal,
+    orden,
   });
   return (
     <TablaComparativaVista
       filas={vista.filas}
       estamentos={estamentos}
+      n={n}
       encabezado={encabezado}
-      pocos={vista.pocos}
+      aviso={conAviso ? vista.pocos : null}
     />
   );
 }
@@ -307,7 +364,7 @@ export function CalorEscala({
 }) {
   const base = columnas.find((c) => c.items)?.items ?? [];
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className="w-full min-w-[34rem] text-[16px] border-separate [border-spacing:2px]">
         <thead>
           <tr>
@@ -414,7 +471,7 @@ export function TablaPrioridades({
   validos: Estamento[];
 }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className="w-full min-w-[56rem] text-[16px]">
         <thead>
           <tr className="text-left align-bottom">

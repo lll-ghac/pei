@@ -5,14 +5,20 @@ import { leerEstado } from "@/lib/estado";
 import { exigirGestor } from "@/lib/gestion";
 import { AvisoEnsayo } from "../../Ayuda";
 import {
+  BRECHA,
   COMPARABLES,
   MINIMO,
+  avisoPocos,
   cargarUrna,
   comparar,
+  fechaCierre,
   filtrarFuncionarios,
   prioridades,
   resumir,
+  sintesis,
+  universo,
   type GrupoFuncionarios,
+  type Orden,
 } from "@/lib/resultados";
 import {
   BarrasOpciones,
@@ -39,6 +45,18 @@ const VISTAS = [
 type Vista = (typeof VISTAS)[number]["id"];
 
 const ESCALAS_POR: Record<Estamento, string> = { A: "A5", E: "E2", F: "F7" };
+
+const ORDENES: { id: Orden; texto: string }[] = [
+  { id: "promedio", texto: "Promedio de estamentos" },
+  { id: "A", texto: "Apoderados" },
+  { id: "E", texto: "Estudiantes" },
+  { id: "F", texto: "Funcionarios" },
+  { id: "dif", texto: "Diferencia" },
+];
+const fechaLarga = new Intl.DateTimeFormat("es-CL", { timeZone: "America/Santiago", dateStyle: "long", timeStyle: "short" });
+const hora = new Intl.DateTimeFormat("es-CL", { timeZone: "America/Santiago", timeStyle: "short" });
+const idDe = (titulo: string) =>
+  "p-" + titulo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-");
 /** Sección de gestión de funcionarios: solo en total o separada entre docentes y asistentes (MVP). */
 const GESTION = ["F7", "F8"];
 
@@ -66,9 +84,11 @@ export default async function Resultados(props: PageProps<"/gestion/resultados">
   }
 
   const prueba = estado.modo === "prueba";
-  const urna = await cargarUrna(prueba);
+  const orden = (ORDENES.find((o) => o.id === q.orden)?.id ?? "promedio") as Orden;
+  const [urna, base, cierre] = await Promise.all([cargarUrna(prueba), universo(), estado.cerrada ? fechaCierre() : null]);
   const n = { A: urna.A.length, E: urna.E.length, F: urna.F.length };
   const href = (ver: string, extra = "") => `/gestion/resultados?ver=${ver}${extra}`;
+  const avisoGlobal = avisoPocos(["A", "E", "F"], n);
 
   return (
     <div className="space-y-6">
@@ -80,10 +100,19 @@ export default async function Resultados(props: PageProps<"/gestion/resultados">
             <span key={e}>
               {i > 0 && " · "}
               {NOMBRE[e]}: <strong className="text-tinta">{n[e]}</strong>
+              {base[e].base > 0 && (
+                <span>
+                  {" "}
+                  de {base[e].base} {base[e].texto} ({Math.round((n[e] / base[e].base) * 100)}%)
+                </span>
+              )}
             </span>
           ))}
         </p>
       </div>
+      <p className="text-[14px] text-gris-texto -mt-3">
+        {cierre ? `Encuesta cerrada el ${fechaLarga.format(cierre)}. ` : ""}Cálculo de las {hora.format(new Date())}
+      </p>
       {!estado.cerrada && <AvisoEnsayo />}
 
       <nav aria-label="Vistas de resultados" className="border-b border-filete">
@@ -109,26 +138,126 @@ export default async function Resultados(props: PageProps<"/gestion/resultados">
         {MINIMO} respuestas. Esto es el dato; la interpretación es de la comisión.
       </p>
 
-      {vista === "resumen" && (
-        <div className="space-y-8">
-          {COMPARABLES.map((c) => {
-            const { n: nc, filas } = comparar(c, urna);
-            const est = (Object.keys(c.codigos) as Estamento[]).filter((e) => (nc[e] ?? 0) >= MINIMO);
-            return (
-              <section key={c.titulo} className="bg-papel border border-filete p-5" aria-labelledby={`c-${c.titulo}`}>
-                <h2 id={`c-${c.titulo}`} className="text-[20px] font-bold">
-                  {c.titulo}
-                </h2>
-                <p className="text-[15px] text-grafito mb-3">
-                  {(Object.entries(c.codigos) as [Estamento, string][]).map(([e, cod]) => `${cod} (n=${nc[e] ?? 0})`).join(" · ")}
-                  {c.nota ? ` · ${c.nota}` : ""}
+      {vista === "resumen" &&
+        (() => {
+          const sin = sintesis(urna);
+          return (
+            <div className="space-y-6">
+              {avisoGlobal && (
+                <p role="note" className="border-l-4 border-ocre-claro bg-ocre-claro/60 px-3 py-2 text-[16px] text-tinta">
+                  {avisoGlobal} En cada pregunta, <span className="text-lacre font-bold">⚠</span> junto al n marca el
+                  estamento con pocos casos.
                 </p>
-                {est.length ? <TablaComparativa filas={filas} estamentos={est} n={nc} ordinal={c.ordinal} /> : <p className="text-gris-texto">Ningún estamento llega a {MINIMO} respuestas.</p>}
+              )}
+
+              <section className="bg-papel border border-tinta p-5 space-y-4" aria-labelledby="t-sintesis">
+                <h2 id="t-sintesis" className="titulo text-[22px]">
+                  Síntesis
+                </h2>
+                <p className="text-[15px] text-grafito -mt-2">
+                  Calculada sola a partir de las preguntas comunes, con estamentos de {MINIMO} respuestas o más. No
+                  interpreta: señala qué conversar.
+                </p>
+                <div className="grid gap-5 md:grid-cols-2">
+                  <div>
+                    <h3 className="font-bold text-[17px]">Coincidencias</h3>
+                    <p className="text-[14px] text-grafito mb-1.5">La misma opción es la primera en todos los estamentos.</p>
+                    {sin.coincidencias.length ? (
+                      <ul className="space-y-1 text-[16px]">
+                        {sin.coincidencias.map((c) => (
+                          <li key={c.pregunta + c.opcion}>
+                            <strong>{c.opcion}</strong>
+                            {c.empate && <span className="text-grafito"> (empate técnico)</span>}
+                            <span className="text-grafito"> · {c.pregunta}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-[16px] text-gris-texto">Ninguna opción es la primera en todos.</p>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-[17px]">Diferencias grandes</h3>
+                    <p className="text-[14px] text-grafito mb-1.5">{BRECHA} puntos o más entre estamentos.</p>
+                    {sin.diferencias.length ? (
+                      <ul className="space-y-1 text-[16px]">
+                        {sin.diferencias.map((d) => (
+                          <li key={d.pregunta + d.opcion}>
+                            <strong>{d.opcion}</strong>{" "}
+                            <span className="tabular-nums">
+                              ({NOMBRE[d.alto[0]]} {Math.round(d.alto[1])}% / {NOMBRE[d.bajo[0]]} {Math.round(d.bajo[1])}%)
+                            </span>
+                            <span className="text-grafito"> · {d.pregunta}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-[16px] text-gris-texto">No hay diferencias de {BRECHA} puntos o más.</p>
+                    )}
+                  </div>
+                </div>
               </section>
-            );
-          })}
-        </div>
-      )}
+
+              <nav aria-label="Preguntas del resumen" className="bg-papel border border-filete p-4 space-y-3">
+                <ol className="grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3 text-[16px]">
+                  {COMPARABLES.map((c, i) => (
+                    <li key={c.titulo}>
+                      <a href={`#${idDe(c.titulo)}`} className="text-timbre underline">
+                        {i + 1}. {c.titulo}
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+                <p className="text-[15px] flex flex-wrap items-center gap-x-1 gap-y-1 border-t border-filete pt-3">
+                  <span className="text-grafito mr-1">Ordenar por:</span>
+                  {ORDENES.map((o) => (
+                    <Link
+                      key={o.id}
+                      href={href("resumen", `&orden=${o.id}`)}
+                      aria-current={orden === o.id ? "true" : undefined}
+                      className={`px-2 py-1 rounded-[2px] no-underline ${
+                        orden === o.id ? "bg-tinta text-papel font-bold" : "text-timbre underline hover:bg-fondo"
+                      }`}
+                    >
+                      {o.texto}
+                    </Link>
+                  ))}
+                </p>
+              </nav>
+
+              {COMPARABLES.map((c, i) => {
+                const { n: nc, filas } = comparar(c, urna);
+                const est = (Object.keys(c.codigos) as Estamento[]).filter((e) => (nc[e] ?? 0) >= MINIMO);
+                return (
+                  <details key={c.titulo} id={idDe(c.titulo)} open className="bg-papel border border-filete group scroll-mt-4">
+                    <summary className="cursor-pointer list-none px-5 pt-5 pb-3 flex items-start gap-2">
+                      <span aria-hidden className="text-timbre text-[15px] pt-1.5 group-open:rotate-90 transition-transform inline-block">
+                        ▸
+                      </span>
+                      <span>
+                        <span className="block text-[20px] font-bold">
+                          {i + 1}. {c.titulo}
+                        </span>
+                        <span className="block text-[15px] text-grafito font-normal">
+                          {(Object.entries(c.codigos) as [Estamento, string][]).map(([e, cod]) => `${cod} (n=${nc[e] ?? 0})`).join(" · ")}
+                          {c.nota ? ` · ${c.nota}` : ""}
+                          {c.ordinal ? " · En el orden de la pregunta." : ""}
+                        </span>
+                      </span>
+                    </summary>
+                    <div className="px-5 pb-5">
+                      {est.length ? (
+                        <TablaComparativa filas={filas} estamentos={est} n={nc} ordinal={c.ordinal} orden={orden} conAviso={false} />
+                      ) : (
+                        <p className="text-gris-texto">Ningún estamento llega a {MINIMO} respuestas.</p>
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
+          );
+        })()}
 
       {vista === "prioridades" &&
         (() => {
