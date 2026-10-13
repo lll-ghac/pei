@@ -6,6 +6,7 @@ import { NIVELES } from "./cursos-iniciales";
 import {
   GRUPOS_ABIERTAS,
   PREGUNTAS_ABIERTAS,
+  grupoDe,
   temasDeGrupo,
   temasDeOtra,
 } from "./temas-abiertas";
@@ -372,6 +373,12 @@ function temasPorEstamento(
       sinPreferencia: vista.sinPreferencia,
     });
   }
+  bloques.push({
+    tipo: "nota",
+    texto: `${grupo.redaccion} ${grupo.preguntas
+      .map((c) => `${c}: «${pregunta(c).p.texto}»`)
+      .join(" · ")}`,
+  });
   if (r.nuevos.length)
     bloques.push({
       tipo: "nota",
@@ -391,15 +398,22 @@ function bloqueOtra(
     {
       tipo: "tabla",
       titulo: "Textos en «Otra» de preguntas cerradas",
-      origen: `Responden a preguntas distintas: van aparte y sin %. Con menos de ${MINIMO} textos en una pregunta no se detallan los temas.`,
-      columnas: ["Pregunta", "Estamento", "Textos", "Temas (textos)"],
+      origen: `Responden a preguntas distintas: van aparte y sin %. Con menos de ${MINIMO} textos en una pregunta no se detallan los temas; los temas nuevos (T98) se muestran siempre.`,
+      columnas: [
+        "Pregunta",
+        "Estamento",
+        "Textos",
+        "Temas (textos)",
+        "Temas nuevos (T98)",
+      ],
       filas: otra.map((o) => [
         o.pregunta,
         NOMBRE[o.estamento],
         String(o.textos),
-        o.textos >= MINIMO
-          ? o.temas.map(([t, c]) => `${t} (${c})`).join(" · ")
-          : `Menos de ${MINIMO}`,
+        o.textos < MINIMO
+          ? `Menos de ${MINIMO}`
+          : o.temas.map(([t, c]) => `${t} (${c})`).join(" · ") || "—",
+        o.nuevos.map(([x, c]) => `${x} (${c})`).join(" · ") || "—",
       ]),
       numericas: [2],
     },
@@ -687,7 +701,12 @@ export async function armarInforme(opciones: {
             : `${x} ${temas.find((y) => y.codigo === x)?.nombre ?? ""}`,
         )
         .join(" · ")}`,
+      grupo: grupoDe(t.pregunta),
     }));
+  const bloqueCitas = (grupo: string, titulo: string): Bloque[] => {
+    const lista = citas.filter((c) => c.grupo === grupo);
+    return lista.length ? [{ tipo: "citas", titulo, citas: lista }] : [];
+  };
   const totalEstamentos = {
     A: urna.A.length,
     E: urna.E.length,
@@ -1002,13 +1021,17 @@ export async function armarInforme(opciones: {
           texto:
             "Textos revisados (sin nombres de personas) y clasificados por la comisión. Los marcados «no publicar» no aparecen.",
         },
-        ...GRUPOS_ABIERTAS.flatMap((g) =>
-          temasPorEstamento(g, textos, temas, totalEstamentos),
-        ),
+        ...GRUPOS_ABIERTAS.flatMap((g) => [
+          ...temasPorEstamento(g, textos, temas, totalEstamentos),
+          ...bloqueCitas(g.id, `Citas destacadas: ${g.titulo.toLowerCase()}`),
+        ]),
         ...bloqueOtra(textos, temas),
-        citas.length
-          ? { tipo: "citas", titulo: "Citas destacadas", citas }
-          : { tipo: "nota", texto: "Aún no hay citas destacadas." },
+        ...bloqueCitas("otra", "Citas destacadas: «Otra»"),
+        ...(citas.length
+          ? []
+          : [
+              { tipo: "nota", texto: "Aún no hay citas destacadas." } as Bloque,
+            ]),
       ],
     },
     {

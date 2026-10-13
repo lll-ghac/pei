@@ -2,7 +2,7 @@
 // Uso, desde la carpeta del proyecto:  npx tsx --test pruebas/temas-abiertas.test.mts
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { temasDeGrupo, temasDeOtra, type TextoTemas } from "../src/lib/temas-abiertas.ts";
+import { grupoDe, temasDeGrupo, temasDeOtra, type TextoTemas } from "../src/lib/temas-abiertas.ts";
 
 const TEMAS = [
   { codigo: "T01", nombre: "Infraestructura" },
@@ -82,5 +82,10 @@ test("«Otra»: por pregunta, solo fuera de las 6 abiertas", () => {
   const textos = [t("A4", ["T98"], { temaNuevo: "Cercanía" }), t("A19", ["T01"]), t("E8", ["T99"])];
   const o = temasDeOtra(textos, TEMAS);
   assert.deepEqual(o.map((x) => x.pregunta), ["A4", "E8"]);
-  assert.deepEqual(o[0].temas, [["T98 · Cercanía", 1]]);
+  assert.deepEqual(o[0].temas, []);
+  assert.deepEqual(o[0].nuevos, [["Cercanía", 1]]);
+});
+
+test("las citas se agrupan igual en todas las vistas: 2030, cambios y «Otra»", () => {
+  assert.deepEqual(["A19", "E13", "F21", "E4", "A3"].map(grupoDe), ["2030", "2030", "cambios", "otra", "otra"]);
 });

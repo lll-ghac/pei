@@ -206,6 +206,9 @@ function FilasComparativa({
                     ▲
                   </span>
                   {puntos(f.dif)}
+                  {f.difFragil && (
+                    <MarcaFragil titulo="frágil: con una persona distinta en un estamento de pocos casos bajaría de 30 puntos" />
+                  )}
                 </strong>
               ) : (
                 <span className="text-grafito">{puntos(f.dif)}</span>
@@ -358,7 +361,9 @@ export function TablaComparativaVista({
             <>
               {" "}
               Diferencia: puntos entre el estamento más alto y el más bajo;{" "}
-              <span className="text-lacre">▲</span> desde {BRECHA}.
+              <span className="text-lacre">▲</span> desde {BRECHA};{" "}
+              <span className="text-lacre font-bold">⚠</span> frágil: una
+              persona distinta la bajaría de {BRECHA}.
             </>
           )}{" "}
           Pase el mouse o toque una barra para ver cuántas personas son.

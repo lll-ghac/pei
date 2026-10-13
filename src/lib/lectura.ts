@@ -30,6 +30,8 @@ export type FilaVista = {
   empate: Partial<Record<Estamento, boolean>>;
   /** Diferencia máxima entre estamentos, en puntos (null si hay menos de 2 estamentos). */
   dif: number | null;
+  /** Diferencia de BRECHA o más que una persona distinta en un estamento de pocos casos bajaría (ver esFragil). */
+  difFragil: boolean;
   /** Fila menor (bajo 10% en todos y sin lugar): va en «Ver todas». */
   menor: boolean;
 };
@@ -91,17 +93,29 @@ export function prepararComparativa(opciones: {
     Math.max(1, estamentos.length);
   let filas: FilaVista[] = opciones.filas.map((f, i) => {
     // Diferencia con los porcentajes redondeados que se ven, para que cuadre con la resta mental.
-    const v = estamentos
-      .map((e) => f.pct[e])
-      .filter((x): x is number => typeof x === "number")
-      .map((x) => Math.round(x));
+    const con = estamentos.filter((e) => typeof f.pct[e] === "number");
+    const v = con.map((e) => Math.round(f.pct[e] as number));
+    const dif = v.length >= 2 ? Math.max(...v) - Math.min(...v) : null;
+    let difFragil = false;
+    if (dif != null && dif >= BRECHA) {
+      const alto = con[v.indexOf(Math.max(...v))];
+      const bajo = con[v.indexOf(Math.min(...v))];
+      difFragil = esFragil({
+        fila: { pct: f.pct, conteo: conteos[i] },
+        estamentos: con,
+        n,
+        alto: [alto, Math.max(...v)],
+        bajo: [bajo, Math.min(...v)],
+      });
+    }
     return {
       texto: f.texto,
       pct: f.pct,
       conteo: conteos[i],
       lugar: lugar[i],
       empate: empate[i],
-      dif: v.length >= 2 ? Math.max(...v) - Math.min(...v) : null,
+      dif,
+      difFragil,
       menor:
         !opciones.ordinal &&
         estamentos.every((e) => (f.pct[e] ?? 0) < BAJO) &&

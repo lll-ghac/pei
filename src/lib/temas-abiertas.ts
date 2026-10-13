@@ -12,11 +12,15 @@ export const GRUPOS_ABIERTAS = [
     id: "2030",
     titulo: "La escuela en el 2030",
     preguntas: ["A19", "E13", "F20"],
+    redaccion:
+      "Apoderados y funcionarios responden la misma pregunta; la de estudiantes tiene otra redacción: compare con cuidado.",
   },
   {
     id: "cambios",
     titulo: "Cambios propuestos",
     preguntas: ["A20", "E14", "F21"],
+    redaccion:
+      "Cada estamento responde una pregunta con redacción distinta: compare con cuidado.",
   },
 ] as const;
 
@@ -26,6 +30,15 @@ export const PREGUNTAS_ABIERTAS: readonly string[] = GRUPOS_ABIERTAS.flatMap(
 );
 
 const ESTAMENTOS: Estamento[] = ["A", "E", "F"];
+
+/** Grupo de un texto: uno de GRUPOS_ABIERTAS o «otra» (preguntas cerradas). Ordena las citas igual en todas las vistas. */
+export function grupoDe(pregunta: string): string {
+  return (
+    GRUPOS_ABIERTAS.find((g) =>
+      (g.preguntas as readonly string[]).includes(pregunta),
+    )?.id ?? "otra"
+  );
+}
 
 export type TextoTemas = {
   pregunta: string;
@@ -109,7 +122,11 @@ export function temasDeGrupo(
   };
 }
 
-/** Textos de «Otra» (preguntas cerradas) clasificados: por pregunta, cuántos y con qué temas. Sin %. */
+/**
+ * Textos de «Otra» (preguntas cerradas) clasificados: por pregunta, cuántos, con qué temas (se muestran
+ * solo con `minimo` textos o más) y las etiquetas de T98, que se muestran siempre: las escribió la
+ * comisión y no identifican a nadie. Sin %.
+ */
 export function temasDeOtra(
   textos: TextoTemas[],
   temas: { codigo: string; nombre: string }[],
@@ -127,20 +144,22 @@ export function temasDeOtra(
   return preguntas.map((p) => {
     const lista = otros.filter((t) => t.pregunta === p);
     const cuenta = new Map<string, number>();
-    for (const t of lista)
+    const nuevos = new Map<string, number>();
+    for (const t of lista) {
       for (const c of [t.tema1, t.tema2, t.tema3])
-        if (c) {
-          const etiqueta =
-            c === "T98" && t.temaNuevo
-              ? `T98 · ${t.temaNuevo}`
-              : `${c} · ${nombre.get(c) ?? ""}`;
+        if (c && c !== "T98") {
+          const etiqueta = `${c} · ${nombre.get(c) ?? ""}`;
           cuenta.set(etiqueta, (cuenta.get(etiqueta) ?? 0) + 1);
         }
+      if (t.temaNuevo && tieneTema(t, "T98"))
+        nuevos.set(t.temaNuevo, (nuevos.get(t.temaNuevo) ?? 0) + 1);
+    }
     return {
       pregunta: p,
       estamento: lista[0].estamento,
       textos: lista.length,
       temas: [...cuenta].sort((a, b) => b[1] - a[1]),
+      nuevos: [...nuevos].sort((a, b) => b[1] - a[1]),
     };
   });
 }

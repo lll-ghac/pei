@@ -3,6 +3,7 @@ import { ENCUESTAS, preguntasDe, type Estamento } from "@/lib/encuestas";
 import { listarTemas, listarTextos, sincronizarTextos } from "@/lib/abiertas";
 import {
   GRUPOS_ABIERTAS,
+  grupoDe,
   temasDeGrupo,
   temasDeOtra,
 } from "@/lib/temas-abiertas";
@@ -338,9 +339,12 @@ export default async function Resultados(
                   <li>
                     Diferencia: puntos entre el estamento más alto y el más
                     bajo, con los porcentajes que se ven;{" "}
-                    <span className="text-lacre">▲</span> desde {BRECHA}. El
-                    promedio de estamentos es simple: cada estamento pesa lo
-                    mismo, sin importar cuántos respondieron.
+                    <span className="text-lacre">▲</span> desde {BRECHA}, con{" "}
+                    <span className="text-lacre font-bold">⚠</span> si es frágil
+                    (una persona distinta en un estamento de pocos casos la
+                    bajaría de {BRECHA}). El promedio de estamentos es simple:
+                    cada estamento pesa lo mismo, sin importar cuántos
+                    respondieron.
                   </li>
                 </ul>
               </section>
@@ -560,6 +564,47 @@ export default async function Resultados(
           const ESTS = ["A", "E", "F"] as Estamento[];
           const suma = (r: Record<Estamento, number>) =>
             ESTS.reduce((s, e) => s + r[e], 0);
+          const textoPregunta = (codigo: string) =>
+            preguntasDe(ENCUESTAS[codigo[0] as Estamento]).find(
+              (p) => p.codigo === codigo,
+            )?.texto ?? "";
+          const citasDe = (grupo: string) =>
+            textos.filter(
+              (t) =>
+                t.estado === "revisado" &&
+                t.cita &&
+                grupoDe(t.pregunta) === grupo,
+            );
+          const Citas = ({ lista }: { lista: typeof textos }) => (
+            <div>
+              <h3 className="font-bold">Citas destacadas ({lista.length})</h3>
+              {lista.length === 0 ? (
+                <p className="text-grafito">
+                  No hay citas destacadas en estas preguntas.
+                </p>
+              ) : (
+                <ul className="space-y-3 mt-2">
+                  {lista.map((c) => (
+                    <li key={c.id} className="border-l border-grafito pl-3">
+                      <p className="text-[17px]">«{c.texto}»</p>
+                      <p className="text-[14px] text-grafito">
+                        {NOMBRE[c.estamento]} · {c.pregunta} ·{" "}
+                        {[c.tema1, c.tema2, c.tema3]
+                          .filter((x): x is string => !!x)
+                          .map((x) =>
+                            x === "T98" && c.temaNuevo
+                              ? `T98 ${c.temaNuevo}`
+                              : `${x} ${nombreTema.get(x) ?? ""}`,
+                          )
+                          .join(" · ")}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+          const citasOtra = citasDe("otra");
           return (
             <div className="space-y-8">
               <p className="text-[16px] text-grafito max-w-[85ch]">
@@ -571,12 +616,6 @@ export default async function Resultados(
               </p>
               {GRUPOS_ABIERTAS.map((g) => {
                 const r = temasDeGrupo(textos, temas, g.preguntas, MINIMO);
-                const citas = textos.filter(
-                  (t) =>
-                    t.estado === "revisado" &&
-                    t.cita &&
-                    (g.preguntas as readonly string[]).includes(t.pregunta),
-                );
                 const fuera = [
                   suma(r.sinContenido) > 0 &&
                     `${suma(r.sinContenido)} sin contenido (T99)`,
@@ -601,6 +640,20 @@ export default async function Resultados(
                           ({g.preguntas.join(" · ")})
                         </span>
                       </h2>
+                      <p className="text-[15px] text-lacre">{g.redaccion}</p>
+                      <details className="text-[15px] text-grafito">
+                        <summary className="cursor-pointer text-timbre underline w-fit">
+                          Ver las preguntas
+                        </summary>
+                        <ul className="mt-1 space-y-0.5">
+                          {g.preguntas.map((p) => (
+                            <li key={p}>
+                              <strong className="text-tinta">{p}</strong>{" "}
+                              {NOMBRE[p[0] as Estamento]}: «{textoPregunta(p)}»
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
                       <p className="text-[15px] text-grafito">
                         Escribieron:{" "}
                         {ESTS.map(
@@ -650,42 +703,11 @@ export default async function Resultados(
                         </ul>
                       </div>
                     )}
-                    <div>
-                      <h3 className="font-bold">
-                        Citas destacadas ({citas.length})
-                      </h3>
-                      {citas.length === 0 ? (
-                        <p className="text-grafito">
-                          No hay citas destacadas en estas preguntas.
-                        </p>
-                      ) : (
-                        <ul className="space-y-3 mt-2">
-                          {citas.map((c) => (
-                            <li
-                              key={c.id}
-                              className="border-l border-grafito pl-3"
-                            >
-                              <p className="text-[17px]">«{c.texto}»</p>
-                              <p className="text-[14px] text-grafito">
-                                {NOMBRE[c.estamento]} · {c.pregunta} ·{" "}
-                                {[c.tema1, c.tema2, c.tema3]
-                                  .filter((x): x is string => !!x)
-                                  .map((x) =>
-                                    x === "T98" && c.temaNuevo
-                                      ? `T98 ${c.temaNuevo}`
-                                      : `${x} ${nombreTema.get(x) ?? ""}`,
-                                  )
-                                  .join(" · ")}
-                              </p>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
+                    <Citas lista={citasDe(g.id)} />
                   </section>
                 );
               })}
-              {otra.length > 0 && (
+              {(otra.length > 0 || citasOtra.length > 0) && (
                 <section
                   className="bg-papel border border-filete p-5 space-y-3"
                   aria-labelledby="abiertas-otra"
@@ -696,7 +718,7 @@ export default async function Resultados(
                   <p className="text-[15px] text-grafito max-w-[85ch]">
                     Responden a preguntas distintas, por eso van aparte y sin %.
                     Con menos de {MINIMO} textos en una pregunta no se detallan
-                    los temas.
+                    los temas; los temas nuevos (T98) se muestran siempre.
                   </p>
                   <ul className="divide-y divide-filete border-y border-filete">
                     {otra.map((o) => (
@@ -705,15 +727,24 @@ export default async function Resultados(
                           {o.pregunta} · {NOMBRE[o.estamento]}
                         </strong>
                         : {o.textos} {o.textos === 1 ? "texto" : "textos"}
-                        {o.textos >= MINIMO && (
+                        {o.textos >= MINIMO && o.temas.length > 0 && (
                           <span className="text-grafito">
                             {" · "}
                             {o.temas.map(([t, c]) => `${t} (${c})`).join(" · ")}
                           </span>
                         )}
+                        {o.nuevos.length > 0 && (
+                          <span className="block text-[15px] text-grafito">
+                            Temas nuevos (T98):{" "}
+                            {o.nuevos
+                              .map(([x, c]) => `${x} (${c})`)
+                              .join(" · ")}
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ul>
+                  <Citas lista={citasOtra} />
                 </section>
               )}
             </div>

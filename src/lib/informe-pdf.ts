@@ -402,7 +402,7 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
           }
         });
         if (conDif && fila.dif != null) {
-          const t = `${fila.dif >= 30 ? "> " : ""}${Math.round(fila.dif)} ${Math.round(fila.dif) === 1 ? "pt" : "pts"}`;
+          const t = `${fila.dif >= 30 ? "> " : ""}${Math.round(fila.dif)} ${Math.round(fila.dif) === 1 ? "pt" : "pts"}${fila.difFragil ? " (!)" : ""}`;
           const fuente = fila.dif >= 30 ? f.negrita : f.normal;
           L.page.drawText(t, {
             x: M + UTIL - fuente.widthOfTextAtSize(t, 8.5),
@@ -433,7 +433,7 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
         );
       }
       L.texto(
-        `Barras de 0 a 100%. 1° 2° 3°: las más elegidas por cada estamento; «=1°»: empate técnico (una persona o menos).${conDif ? " Diferencia: puntos entre el estamento más alto y el más bajo; en rojo desde 30." : ""}`,
+        `Barras de 0 a 100%. 1° 2° 3°: las más elegidas por cada estamento; «=1°»: empate técnico (una persona o menos).${conDif ? " Diferencia: puntos entre el estamento más alto y el más bajo; en rojo desde 30; (!) frágil: una persona distinta la bajaría de 30." : ""}`,
         { size: 8, color: C.gris },
       );
       origen(b.origen);

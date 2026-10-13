@@ -155,3 +155,18 @@ test("frágil solo quien está a una persona del corte: e) con 6 no, d) y m) con
   assert.equal(t.filas[4].fragil, true, "m) con 5");
   assert.equal(t.filas[0].fragil, false);
 });
+
+test("tabla comparativa: la Diferencia de 30 o más se marca frágil con la misma regla del Resumen", () => {
+  // A 4/9 = 44 %, E 1/19 = 5 %: 39 pts; con una persona menos en A, 33 − 5 = 28 → frágil.
+  // A 8/9 = 89 %, E 2/19 = 11 %: 78 pts; ni −1 en A ni +1 en E la bajan de 30 → no frágil.
+  const n = { A: 9, E: 19 };
+  const r = prepararComparativa({
+    filas: filas(n, { Fragil: { A: 4, E: 1 }, Solida: { A: 8, E: 2 }, Chica: { A: 2, E: 2 } }),
+    estamentos: ["A", "E"],
+    n,
+  });
+  const f = (t: string) => r.filas.find((x) => x.texto === t)!;
+  assert.equal(f("Fragil").difFragil, true);
+  assert.equal(f("Solida").difFragil, false);
+  assert.equal(f("Chica").difFragil, false, "bajo 30 no se marca");
+});
