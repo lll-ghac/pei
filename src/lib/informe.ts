@@ -302,7 +302,7 @@ export function bloqueEquivalentes(
       tipo: "tabla",
       titulo: "Frases equivalentes entre estamentos",
       origen:
-        "Apoderados (A5) y funcionarios (F7): % de acuerdo entre quienes opinaron. Estudiantes (E2): % «casi siempre» + «siempre», otra escala: se muestra al lado, sin restar. La diferencia se calcula solo con la misma frase y la misma escala. La correspondencia entre frases la propuso el desarrollo y debe revisarla la comisión.",
+        "Apoderados (A5) y funcionarios (F7): % de acuerdo entre quienes opinaron. Estudiantes (E2): % «casi siempre» + «siempre», otra escala: se muestra al lado, sin restar. La diferencia se calcula solo con la misma frase y la misma escala. Correspondencia entre frases aprobada por la comisión el 13 de octubre de 2026.",
       columnas: [
         "Tema",
         "Apoderados",

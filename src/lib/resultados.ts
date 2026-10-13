@@ -548,7 +548,7 @@ export async function fechaCierre(): Promise<Date | null> {
 
 /**
  * Frases que tocan el mismo tema en las tres escalas. La correspondencia la propuso el desarrollo
- * (9/10) y debe revisarla la comisión. `misma`: apoderados y funcionarios tienen la misma frase y la
+ * (9/10) y la comisión la aprobó sin cambios el 13/10/2026: no cambiar sin su acuerdo. `misma`: apoderados y funcionarios tienen la misma frase y la
  * misma escala (de acuerdo), así que solo ahí se calcula la diferencia entre ellos. Estudiantes responde
  * con frecuencia (otra escala): se muestra al lado, sin restar.
  */
