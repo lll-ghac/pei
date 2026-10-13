@@ -690,7 +690,7 @@ export async function informePdf(
   );
   L.y -= 8;
   L.texto(
-    "La huella digital (SHA-256) de este archivo quedó anotada en la bitácora del panel. Para comprobar que es el original: Panel → Descargas → Verificar un archivo, o certutil -hashfile archivo SHA256 en Windows.",
+    "La huella digital (SHA-256) de este archivo quedó anotada en la bitácora del panel. Para comprobar que es el original: Panel → Descargas → Verificar un archivo. Solo en Windows, también sin la plataforma: certutil -hashfile archivo SHA256.",
     { size: 9, color: C.grafito },
   );
   const paginaIndice = doc.getPageCount();

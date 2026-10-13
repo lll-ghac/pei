@@ -566,7 +566,7 @@ export async function armarSabana(version: Version, valores: Valores) {
     [],
     ["Huella digital (SHA-256)"],
     [
-      "La huella de este archivo quedó anotada en la bitácora del panel con fecha y autor. Para comprobar que no cambió: en Windows, certutil -hashfile <archivo> SHA256, o Panel → Descargas → Verificar un archivo.",
+      "La huella de este archivo quedó anotada en la bitácora del panel con fecha y autor. Para comprobar que no cambió: Panel → Descargas → Verificar un archivo. Solo en Windows, también sin la plataforma: certutil -hashfile <archivo> SHA256.",
     ],
     [
       "Guarde el original sin abrirlo ni volver a guardarlo y trabaje siempre en una copia: Excel cambia la huella al guardar, aunque no se modifiquen los datos.",
