@@ -108,7 +108,11 @@ a {
 /* Línea de corte perforada bajo la banda de timbre. */
 .perforado {
   height: 10px;
-  background-image: radial-gradient(circle at 5px 5px, var(--color-fondo) 2.4px, transparent 2.6px);
+  background-image: radial-gradient(
+    circle at 5px 5px,
+    var(--color-fondo) 2.4px,
+    transparent 2.6px
+  );
   background-size: 14px 10px;
   background-color: var(--color-papel);
 }
@@ -164,11 +168,31 @@ a {
   background: var(--color-lacre);
   color: #fff;
 }
+/* Selector de archivo: el botón nativo con la forma del botón secundario (sin esto se ve como texto). */
+input[type="file"]::file-selector-button {
+  min-height: 2.75rem;
+  margin-right: 0.75rem;
+  padding: 0.4rem 1.1rem;
+  border: 1px solid var(--color-grafito);
+  border-radius: 3px;
+  background: var(--color-papel);
+  color: var(--color-tinta);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+input[type="file"]:disabled::file-selector-button {
+  opacity: 0.55;
+  cursor: default;
+}
 @media (hover: hover) and (pointer: fine) {
   .boton-primario:hover {
     background: #86a316;
   }
   .boton-secundario:hover {
+    background: var(--color-fondo);
+  }
+  input[type="file"]:enabled::file-selector-button:hover {
     background: var(--color-fondo);
   }
 }

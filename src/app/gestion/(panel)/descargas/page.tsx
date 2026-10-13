@@ -1,4 +1,5 @@
 import { desc, ilike } from "drizzle-orm";
+import Link from "next/link";
 import { db, schema } from "@/db";
 import { pendientes, sincronizarTextos } from "@/lib/abiertas";
 import { leerEstado } from "@/lib/estado";
@@ -63,6 +64,21 @@ export default async function Descargas() {
     await sincronizarTextos(prueba);
     faltan = await pendientes(prueba);
   }
+  const bloqueo = !habilitada ? (
+    "Se habilita cuando la administración cierra la encuesta (Panel → Sistema)."
+  ) : faltan > 0 ? (
+    <>
+      Primero hay que revisar los nombres en las respuestas abiertas: faltan{" "}
+      {faltan} {faltan === 1 ? "texto" : "textos"} en{" "}
+      <Link
+        href="/gestion/abiertas"
+        className="text-timbre underline font-bold"
+      >
+        Panel → Abiertas
+      </Link>
+      .
+    </>
+  ) : null;
   const recientes = await db
     .select()
     .from(schema.bitacora)
@@ -125,20 +141,24 @@ export default async function Descargas() {
           </Ayuda>
         </div>
 
-        {!habilitada ? (
-          <p className="text-[16px] text-grafito">
-            Se habilita al cerrar la encuesta.
-          </p>
-        ) : faltan > 0 ? (
-          <p className="text-[16px] text-grafito">
-            Se habilita cuando no quedan textos por revisar en Panel → Abiertas
-            (faltan {faltan}).
-          </p>
-        ) : (
-          <form
-            method="get"
-            action="/gestion/descargas/sabana"
-            className="space-y-4"
+        <p className="text-[16px] max-w-[80ch]">
+          Planilla con todas las respuestas, para revisar o rehacer cualquier
+          cifra sin la plataforma. Elija versión, valores y formato, y toque{" "}
+          <strong>«Descargar la sábana»</strong>.
+        </p>
+        {bloqueo && (
+          <div
+            role="status"
+            className="border border-filete border-l-4 border-l-timbre bg-fondo px-3 py-2 text-[16px] space-y-1"
+          >
+            <p className="font-bold">Todavía no se puede descargar.</p>
+            <p>{bloqueo}</p>
+          </div>
+        )}
+        <form method="get" action="/gestion/descargas/sabana">
+          <fieldset
+            disabled={!!bloqueo}
+            className="space-y-4 disabled:opacity-60"
           >
             <Grupo
               nombre="version"
@@ -197,8 +217,8 @@ export default async function Descargas() {
               el original sin abrirlo ni volver a guardarlo y trabaje en una
               copia: Excel cambia la huella al guardar.
             </p>
-          </form>
-        )}
+          </fieldset>
+        </form>
       </section>
 
       <section
@@ -229,6 +249,10 @@ export default async function Descargas() {
             </p>
           </Ayuda>
         </div>
+        <p className="text-[16px] max-w-[80ch]">
+          Sirve para comprobar que un archivo que le entregaron es idéntico al
+          que descargó la plataforma, sin cambios.
+        </p>
         <Verificar />
       </section>
 
@@ -239,6 +263,10 @@ export default async function Descargas() {
         <h2 id="titulo-recientes" className="rotulo text-[17px]">
           Últimas descargas registradas
         </h2>
+        <p className="text-[15px] text-grafito max-w-[80ch]">
+          Cada archivo que entrega la plataforma queda aquí con su huella. Al
+          verificar un archivo, se compara con estas huellas.
+        </p>
         {recientes.length === 0 ? (
           <p className="text-grafito">Todavía no hay descargas.</p>
         ) : (
