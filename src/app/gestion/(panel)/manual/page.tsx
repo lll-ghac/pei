@@ -25,7 +25,7 @@ function Ir({ a, children }: { a: string; children: React.ReactNode }) {
   return (
     <Link
       href={a}
-      className="text-timbre underline font-bold print:no-underline print:text-tinta"
+      className="text-timbre underline font-bold break-words print:no-underline print:text-tinta"
     >
       {children}
     </Link>
@@ -143,6 +143,15 @@ export default async function ManualComision() {
             portada para armar el sobre del curso.
           </li>
           <li>
+            <strong>El PDF de papeletas, una sola vez:</strong> trae usuario y
+            contraseña de cada papeleta, así que una copia guardada permite
+            responder con las que siguen sin usar. Imprímalo una vez y borre el
+            archivo del computador y de Descargas; no lo envíe por correo ni por
+            WhatsApp. En modo Oficial, volver a descargarlo pide «Reimprimir» y
+            cada reimpresión queda en la bitácora (trae solo las papeletas sin
+            usar).
+          </li>
+          <li>
             <strong>Entregar los sobres</strong> a cada profesor jefe junto con
             su manual. Las papeletas se reparten al azar y{" "}
             <strong>nadie anota cuál recibe cada persona</strong>.
@@ -168,7 +177,10 @@ export default async function ManualComision() {
             <strong>Papeletas de apoderados entregadas:</strong> cada profesor
             jefe informa cuántas entregó (sin nombres). Páselo a la
             administración, que lo anota en Cursos: es la base del porcentaje
-            del curso.
+            del curso. Mientras no se anote, el avance usa la matrícula y lo
+            marca con un asterisco (*): como cada familia recibe una sola
+            papeleta, ese porcentaje sale más bajo de lo real. Conviene
+            anotarlas antes de compartir el avance con los cursos.
           </li>
           <li>
             <strong>Papeleta perdida:</strong> se entrega una de reserva del
@@ -187,6 +199,14 @@ export default async function ManualComision() {
             cuántos hubo en la última hora. Si el número se dispara, avise a la
             administración.
           </li>
+          <li>
+            <strong>Papeletas bloqueadas:</strong> 5 contraseñas erradas
+            bloquean una papeleta 15 minutos, solo en la conexión donde se
+            equivocaron: desde otra red (por ejemplo, los datos del celular) la
+            misma papeleta entra igual. El inicio del panel muestra cuántas hay
+            bloqueadas; si llegan a 10 se marca en rojo, porque puede ser
+            alguien probando papeletas ajenas. Avise a la administración.
+          </li>
         </ul>
       </Seccion>
 
@@ -199,13 +219,21 @@ export default async function ManualComision() {
         </p>
         <ol>
           <li>
-            <strong>Revisar nombres.</strong> La plataforma marca en amarillo lo
-            que podría ser un nombre. Seleccione el nombre y reemplácelo por un
-            rol general ([docente], [estudiante]…), y guarde como revisado. Los
-            textos sin marcas igual se leen y se confirman de a 100. Si un texto
-            relata una situación grave, márquelo «No publicar»: la
-            administración lo deriva al encargado de convivencia por el canal
-            formal. El texto original no se guarda.
+            <strong>Revisar nombres.</strong> La plataforma marca en{" "}
+            <strong>amarillo</strong> lo que podría ser un nombre (tratamiento +
+            nombre, nombres de la lista del personal, mayúscula a mitad de
+            oración) y en <strong>rosado</strong> lo que podría identificar a
+            alguien sin nombrarlo: un cargo con su asignatura, curso o lugar
+            («la profe de lenguaje», «el inspector del patio») o un cargo que
+            tiene una sola persona («la directora»; la lista de cargos la ajusta
+            la administración al final de Abiertas). Las marcas solo avisan:
+            usted decide. Seleccione lo que identifica y reemplácelo por un rol
+            sin género ([docente], [asistente], [estudiante]…). Al guardar un
+            texto corregido, la plataforma muestra cómo quedará y pide
+            confirmar, porque el original no se conserva. Los textos sin marcas
+            igual se leen y se confirman de a 100. Si un texto relata una
+            situación grave, márquelo «No publicar»: la administración lo deriva
+            al encargado de convivencia por el canal formal.
           </li>
           <li>
             <strong>Descargar</strong> <code>abiertas.csv</code> y{" "}
@@ -233,8 +261,39 @@ export default async function ManualComision() {
             <strong>
               <Ir a="/gestion/resultados">Resultados</Ir>:
             </strong>{" "}
-            vista rápida para explorar (resumen, prioridades, escalas, abiertas
-            y cada estamento).
+            vista para explorar (resumen, prioridades, escalas, abiertas y cada
+            estamento). Cómo leerla:
+            <ul>
+              <li>
+                Arriba, la <strong>síntesis</strong>: coincidencias (la misma
+                opción es la primera en todos los estamentos) y diferencias
+                grandes (30 puntos o más). Señala qué conversar; no interpreta.
+              </li>
+              <li>
+                <strong>1° 2° 3°</strong>: lo más elegido por cada estamento.
+                «=1°» es empate técnico (se separan por una persona o menos).
+                «Sin preferencia clara»: más de 3 opciones empatan en el primer
+                lugar.
+              </li>
+              <li>
+                <strong>⚠ frágil</strong>: una persona que hubiera respondido
+                distinto cambiaría la diferencia o la lectura. Con grupos chicos
+                es frecuente, y es lo que dicen los datos.
+              </li>
+              <li>
+                <strong>Pocos casos</strong>: con menos de 30 respuestas en un
+                estamento, una persona pesa varios puntos. Al pasar el mouse o
+                tocar una barra se ve cuántas personas son («6 de 9»).
+              </li>
+              <li>
+                <strong>Frases equivalentes</strong> (pestaña Escalas y sección
+                4 del Informe): parejas de frases de las tres escalas que tratan
+                un mismo tema, aprobadas por la comisión el 13 de octubre de
+                2026. Solo trato igualitario (misma frase y escala en apoderados
+                y funcionarios) se compara restando; estudiantes responde con
+                otra escala y se mira al lado.
+              </li>
+            </ul>
           </li>
           <li>
             <strong>
@@ -297,6 +356,12 @@ export default async function ManualComision() {
           <li>
             Nunca anotar, fotografiar ni preguntar qué papeleta recibió cada
             persona.
+          </li>
+          <li>
+            Nunca pedir un pantallazo o comprobante de haber respondido, ni
+            llevar la cuenta de quién avisó: la participación es voluntaria y
+            nadie debe saber quién falta. Para motivar, se comparte el avance
+            del curso (solo números) y se recuerda a todos por igual.
           </li>
           <li>
             No se informan grupos con menos de 5 respuestas (la plataforma ya
