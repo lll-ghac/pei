@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { ENCUESTAS, preguntasDe, type Estamento } from "@/lib/encuestas";
 import { listarTemas, listarTextos, sincronizarTextos } from "@/lib/abiertas";
+import {
+  GRUPOS_ABIERTAS,
+  temasDeGrupo,
+  temasDeOtra,
+} from "@/lib/temas-abiertas";
 import { leerEstado } from "@/lib/estado";
 import { exigirGestor } from "@/lib/gestion";
 import { AvisoEnsayo } from "../../Ayuda";
@@ -542,10 +547,7 @@ export default async function Resultados(
             listarTextos(prueba),
             listarTemas(),
           ]);
-          const clasificados = textos.filter(
-            (t) => t.estado === "revisado" && t.tema1,
-          );
-          if (!clasificados.length) {
+          if (!textos.some((t) => t.estado === "revisado" && t.tema1)) {
             return (
               <p className="text-grafito max-w-[75ch]">
                 Aún no hay clasificación cargada. Primero se revisan los nombres
@@ -553,104 +555,167 @@ export default async function Resultados(
               </p>
             );
           }
-          const est = (["A", "E", "F"] as Estamento[]).filter(
-            (e) =>
-              clasificados.filter((t) => t.estamento === e).length >= MINIMO,
-          );
-          const nE = Object.fromEntries(
-            (["A", "E", "F"] as Estamento[]).map((e) => [
-              e,
-              clasificados.filter((t) => t.estamento === e).length,
-            ]),
-          );
-          const filas = temas
-            .map((t) => {
-              const pct: Partial<Record<Estamento, number | null>> = {};
-              for (const e of ["A", "E", "F"] as Estamento[]) {
-                const lista = clasificados.filter((x) => x.estamento === e);
-                pct[e] =
-                  lista.length < MINIMO
-                    ? null
-                    : (lista.filter((x) =>
-                        [x.tema1, x.tema2, x.tema3].includes(t.codigo),
-                      ).length /
-                        lista.length) *
-                      100;
-              }
-              return {
-                opcion: {
-                  codigo: t.codigo,
-                  texto: `${t.codigo} · ${t.nombre}`,
-                },
-                pct,
-              };
-            })
-            .filter((f) => Object.values(f.pct).some((v) => (v ?? 0) > 0));
-          const nuevos = clasificados
-            .filter((t) => t.temaNuevo)
-            .map((t) => t.temaNuevo!);
-          const citas = clasificados.filter((t) => t.cita);
+          const nombreTema = new Map(temas.map((t) => [t.codigo, t.nombre]));
+          const otra = temasDeOtra(textos, temas);
+          const ESTS = ["A", "E", "F"] as Estamento[];
+          const suma = (r: Record<Estamento, number>) =>
+            ESTS.reduce((s, e) => s + r[e], 0);
           return (
             <div className="space-y-8">
-              <section className="bg-papel border border-filete p-5">
-                <h2 className="text-[20px] font-bold">
-                  Temas de las respuestas abiertas
-                </h2>
-                <p className="text-[15px] text-grafito mb-3">
-                  % de textos clasificados que mencionan cada tema (un texto
-                  puede tener hasta 3) ·{" "}
-                  {(["A", "E", "F"] as Estamento[])
-                    .map((e) => `${NOMBRE[e]} n=${nE[e]}`)
-                    .join(" · ")}
-                </p>
-                {est.length ? (
-                  <TablaComparativa
-                    filas={filas}
-                    estamentos={est}
-                    n={nE}
-                    encabezado="Tema"
-                  />
-                ) : (
-                  <p className="text-gris-texto">
-                    Ningún estamento llega a {MINIMO} textos clasificados.
-                  </p>
-                )}
-              </section>
-              {nuevos.length > 0 && (
-                <section className="bg-papel border border-filete p-5">
-                  <h2 className="text-[20px] font-bold">
-                    Temas nuevos propuestos (T98)
-                  </h2>
-                  <ul className="mt-2 columns-1 sm:columns-2 text-[16px]">
-                    {[...new Set(nuevos)].map((x) => (
-                      <li key={x}>
-                        {x}{" "}
-                        <span className="text-grafito">
-                          ({nuevos.filter((y) => y === x).length})
+              <p className="text-[16px] text-grafito max-w-[85ch]">
+                Una tabla por tipo de pregunta. Cada persona escribe a lo más un
+                texto por pregunta: el % es de las personas que escribieron algo
+                con contenido, no de todo el estamento. Un texto puede tener
+                hasta 3 temas, por eso no suma 100%. Los textos sin contenido
+                (T99) no entran al cálculo y los temas nuevos (T98) van aparte.
+              </p>
+              {GRUPOS_ABIERTAS.map((g) => {
+                const r = temasDeGrupo(textos, temas, g.preguntas, MINIMO);
+                const citas = textos.filter(
+                  (t) =>
+                    t.estado === "revisado" &&
+                    t.cita &&
+                    (g.preguntas as readonly string[]).includes(t.pregunta),
+                );
+                const fuera = [
+                  suma(r.sinContenido) > 0 &&
+                    `${suma(r.sinContenido)} sin contenido (T99)`,
+                  suma(r.noPublicar) > 0 &&
+                    `${suma(r.noPublicar)} «no publicar»`,
+                  suma(r.sinClasificar) > 0 &&
+                    `${suma(r.sinClasificar)} sin clasificar`,
+                ].filter(Boolean);
+                return (
+                  <section
+                    key={g.id}
+                    className="bg-papel border border-filete p-5 space-y-4"
+                    aria-labelledby={`abiertas-${g.id}`}
+                  >
+                    <div>
+                      <h2
+                        id={`abiertas-${g.id}`}
+                        className="text-[20px] font-bold"
+                      >
+                        {g.titulo}{" "}
+                        <span className="text-grafito font-normal text-[16px]">
+                          ({g.preguntas.join(" · ")})
                         </span>
+                      </h2>
+                      <p className="text-[15px] text-grafito">
+                        Escribieron:{" "}
+                        {ESTS.map(
+                          (e) => `${NOMBRE[e]} ${r.escribieron[e]} de ${n[e]}`,
+                        ).join(" · ")}
+                      </p>
+                      <p className="text-[15px] text-grafito">
+                        Base del %:{" "}
+                        {ESTS.map((e) => `${NOMBRE[e]} ${r.n[e]}`).join(" · ")}
+                        {fuera.length > 0 &&
+                          ` · fuera del cálculo: ${fuera.join(", ")}`}
+                      </p>
+                    </div>
+                    {r.estamentos.length ? (
+                      <TablaComparativa
+                        filas={r.filas.map((f) => ({
+                          opcion: { codigo: f.codigo, texto: f.texto },
+                          pct: f.pct,
+                        }))}
+                        estamentos={r.estamentos}
+                        n={r.n}
+                        encabezado="Tema"
+                      />
+                    ) : (
+                      <p className="text-gris-texto">
+                        Ningún estamento llega a {MINIMO} personas con textos
+                        clasificados.
+                      </p>
+                    )}
+                    {r.estamentos.length > 0 && r.estamentos.length < 3 && (
+                      <p className="text-[15px] text-grafito">
+                        No se muestran los estamentos con menos de {MINIMO}{" "}
+                        personas en la base.
+                      </p>
+                    )}
+                    {r.nuevos.length > 0 && (
+                      <div>
+                        <h3 className="font-bold">
+                          Temas nuevos propuestos (T98)
+                        </h3>
+                        <ul className="mt-1 columns-1 sm:columns-2 text-[16px]">
+                          {r.nuevos.map(([x, c]) => (
+                            <li key={x}>
+                              {x} <span className="text-grafito">({c})</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="font-bold">
+                        Citas destacadas ({citas.length})
+                      </h3>
+                      {citas.length === 0 ? (
+                        <p className="text-grafito">
+                          No hay citas destacadas en estas preguntas.
+                        </p>
+                      ) : (
+                        <ul className="space-y-3 mt-2">
+                          {citas.map((c) => (
+                            <li
+                              key={c.id}
+                              className="border-l border-grafito pl-3"
+                            >
+                              <p className="text-[17px]">«{c.texto}»</p>
+                              <p className="text-[14px] text-grafito">
+                                {NOMBRE[c.estamento]} · {c.pregunta} ·{" "}
+                                {[c.tema1, c.tema2, c.tema3]
+                                  .filter((x): x is string => !!x)
+                                  .map((x) =>
+                                    x === "T98" && c.temaNuevo
+                                      ? `T98 ${c.temaNuevo}`
+                                      : `${x} ${nombreTema.get(x) ?? ""}`,
+                                  )
+                                  .join(" · ")}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </section>
+                );
+              })}
+              {otra.length > 0 && (
+                <section
+                  className="bg-papel border border-filete p-5 space-y-3"
+                  aria-labelledby="abiertas-otra"
+                >
+                  <h2 id="abiertas-otra" className="text-[20px] font-bold">
+                    Textos en «Otra» de preguntas cerradas
+                  </h2>
+                  <p className="text-[15px] text-grafito max-w-[85ch]">
+                    Responden a preguntas distintas, por eso van aparte y sin %.
+                    Con menos de {MINIMO} textos en una pregunta no se detallan
+                    los temas.
+                  </p>
+                  <ul className="divide-y divide-filete border-y border-filete">
+                    {otra.map((o) => (
+                      <li key={o.pregunta} className="py-2 text-[16px]">
+                        <strong>
+                          {o.pregunta} · {NOMBRE[o.estamento]}
+                        </strong>
+                        : {o.textos} {o.textos === 1 ? "texto" : "textos"}
+                        {o.textos >= MINIMO && (
+                          <span className="text-grafito">
+                            {" · "}
+                            {o.temas.map(([t, c]) => `${t} (${c})`).join(" · ")}
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ul>
                 </section>
               )}
-              <section className="bg-papel border border-filete p-5">
-                <h2 className="text-[20px] font-bold">
-                  Citas destacadas ({citas.length})
-                </h2>
-                <p className="text-[15px] text-grafito mb-3">
-                  Textos ya revisados, sin nombres de personas.
-                </p>
-                <ul className="space-y-3">
-                  {citas.map((c) => (
-                    <li key={c.id} className="border-l border-grafito pl-3">
-                      <p className="text-[17px]">«{c.texto}»</p>
-                      <p className="text-[14px] text-grafito">
-                        {NOMBRE[c.estamento]} · {c.pregunta}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </section>
             </div>
           );
         })())}
@@ -726,8 +791,9 @@ export default async function Resultados(
                         />
                         {r.textosOtra > 0 && (
                           <p className="mt-2 text-[15px] text-grafito">
-                            {r.textosOtra} texto(s) en «Otra»: se leen en
-                            Abiertas, después de la revisión de nombres.
+                            {r.textosOtra} texto(s) en «Otra»: sus temas se ven
+                            en la pestaña Abiertas, después de la revisión de
+                            nombres y la clasificación.
                           </p>
                         )}
                       </>

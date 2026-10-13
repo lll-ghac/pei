@@ -4,6 +4,12 @@ import { db, schema } from "@/db";
 import { listarTemas, listarTextos, type Texto } from "./abiertas";
 import { NIVELES } from "./cursos-iniciales";
 import {
+  GRUPOS_ABIERTAS,
+  PREGUNTAS_ABIERTAS,
+  temasDeGrupo,
+  temasDeOtra,
+} from "./temas-abiertas";
+import {
   ENCUESTAS,
   VERSION_INSTRUMENTO,
   preguntasDe,
@@ -322,57 +328,82 @@ export function bloqueEquivalentes(
   ];
 }
 
-/** Temas de las respuestas abiertas por estamento (% de textos clasificados que mencionan el tema). */
+/**
+ * Temas de un tipo de pregunta abierta (ver `temas-abiertas.ts`): % de las personas que escribieron
+ * algo con contenido; T99 fuera de la base y T98 aparte.
+ */
 function temasPorEstamento(
-  titulo: string,
+  grupo: (typeof GRUPOS_ABIERTAS)[number],
   textos: Texto[],
   temas: { codigo: string; nombre: string }[],
-  preguntas?: string[],
-): Bloque {
-  const clasificados = textos.filter(
-    (t) =>
-      t.estado === "revisado" &&
-      t.tema1 &&
-      (!preguntas || preguntas.includes(t.pregunta)),
-  );
-  const n = Object.fromEntries(
-    ESTAMENTOS.map((e) => [
-      e,
-      clasificados.filter((t) => t.estamento === e).length,
-    ]),
-  ) as Record<Estamento, number>;
-  const est = ESTAMENTOS.filter((e) => n[e] >= MINIMO);
-  if (!est.length)
-    return {
+  total: Record<Estamento, number>,
+): Bloque[] {
+  const r = temasDeGrupo(textos, temas, grupo.preguntas, MINIMO);
+  const titulo = `${grupo.titulo}: temas`;
+  const preguntas = grupo.preguntas.join(", ");
+  const sumar = (x: Record<Estamento, number>) =>
+    ESTAMENTOS.reduce((s, e) => s + x[e], 0);
+  const fuera = [
+    sumar(r.sinContenido) > 0 && `${sumar(r.sinContenido)} sin contenido (T99)`,
+    sumar(r.noPublicar) > 0 && `${sumar(r.noPublicar)} «no publicar»`,
+    sumar(r.sinClasificar) > 0 && `${sumar(r.sinClasificar)} sin clasificar`,
+  ].filter(Boolean);
+  const bloques: Bloque[] = [];
+  if (!r.estamentos.length)
+    bloques.push({
       tipo: "nota",
-      texto: `${titulo}: ningún estamento llega a ${MINIMO} textos clasificados.`,
-    };
-  const filas = temas
-    .map((t) => {
-      const fila: Partial<Record<Estamento, number | null>> = {};
-      for (const e of est) {
-        const lista = clasificados.filter((x) => x.estamento === e);
-        fila[e] = pct(
-          lista.filter((x) => [x.tema1, x.tema2, x.tema3].includes(t.codigo))
-            .length,
-          lista.length,
-        );
-      }
-      return { texto: `${t.codigo} ${t.nombre}`, pct: fila };
-    })
-    .filter((f) => est.some((e) => (f.pct[e] ?? 0) > 0));
-  const vista = prepararComparativa({ filas, estamentos: est, n });
-  return {
-    tipo: "comparativa",
-    titulo,
-    origen: `${preguntas?.join(", ") ?? "Todas las abiertas"} · textos clasificados: ${est.map((e) => `${e} ${n[e]}`).join(" · ")} · % de textos que mencionan el tema; un texto puede tener hasta 3, por eso no suma 100%`,
-    encabezado: "Tema",
-    estamentos: est,
-    filas: vista.filas,
-    pocos: vista.pocos,
-    n,
-    sinPreferencia: vista.sinPreferencia,
-  };
+      texto: `${titulo}: ningún estamento llega a ${MINIMO} personas con textos clasificados (${preguntas}).`,
+    });
+  else {
+    const vista = prepararComparativa({
+      filas: r.filas.map((f) => ({ texto: f.texto, pct: f.pct })),
+      estamentos: r.estamentos,
+      n: r.n,
+    });
+    bloques.push({
+      tipo: "comparativa",
+      titulo,
+      origen: `${preguntas} · escribieron: ${ESTAMENTOS.map((e) => `${e} ${r.escribieron[e]} de ${total[e]}`).join(" · ")} · base del %: personas que escribieron algo con contenido (${ESTAMENTOS.map((e) => `${e} ${r.n[e]}`).join(" · ")})${fuera.length ? `; fuera del cálculo: ${fuera.join(", ")}` : ""} · un texto puede tener hasta 3 temas, por eso no suma 100% · los temas nuevos (T98) van aparte`,
+      encabezado: "Tema",
+      estamentos: r.estamentos,
+      filas: vista.filas,
+      pocos: vista.pocos,
+      n: r.n,
+      sinPreferencia: vista.sinPreferencia,
+    });
+  }
+  if (r.nuevos.length)
+    bloques.push({
+      tipo: "nota",
+      texto: `Temas nuevos propuestos (T98) en ${preguntas}: ${r.nuevos.map(([x, c]) => `${x} (${c})`).join(" · ")}.`,
+    });
+  return bloques;
+}
+
+/** Textos de «Otra» de preguntas cerradas: aparte y sin %, temas solo con 5 textos o más. */
+function bloqueOtra(
+  textos: Texto[],
+  temas: { codigo: string; nombre: string }[],
+): Bloque[] {
+  const otra = temasDeOtra(textos, temas);
+  if (!otra.length) return [];
+  return [
+    {
+      tipo: "tabla",
+      titulo: "Textos en «Otra» de preguntas cerradas",
+      origen: `Responden a preguntas distintas: van aparte y sin %. Con menos de ${MINIMO} textos en una pregunta no se detallan los temas.`,
+      columnas: ["Pregunta", "Estamento", "Textos", "Temas (textos)"],
+      filas: otra.map((o) => [
+        o.pregunta,
+        NOMBRE[o.estamento],
+        String(o.textos),
+        o.textos >= MINIMO
+          ? o.temas.map(([t, c]) => `${t} (${c})`).join(" · ")
+          : `Menos de ${MINIMO}`,
+      ]),
+      numericas: [2],
+    },
+  ];
 }
 
 export async function armarInforme(opciones: {
@@ -485,11 +516,16 @@ export async function armarInforme(opciones: {
       .map((f) => `${f.opcion.texto} (${fmtPct(prom(f))})`);
   };
   const clasificados = textos.filter((t) => t.estado === "revisado" && t.tema1);
+  const conContenido = clasificados.filter(
+    (t) =>
+      PREGUNTAS_ABIERTAS.includes(t.pregunta) &&
+      ![t.tema1, t.tema2, t.tema3].includes("T99"),
+  );
   const conteoTemas = temas
     .filter((t) => !["T98", "T99"].includes(t.codigo))
     .map((t) => ({
       t,
-      c: clasificados.filter((x) =>
+      c: conContenido.filter((x) =>
         [x.tema1, x.tema2, x.tema3].includes(t.codigo),
       ).length,
     }))
@@ -532,14 +568,14 @@ export async function armarInforme(opciones: {
     "Temas más mencionados en las abiertas",
     clasificados.length === 0
       ? "Aún no hay clasificación cargada (Panel → Abiertas)"
-      : clasificados.length < MINIMO
-        ? `Solo ${clasificados.length} ${clasificados.length === 1 ? "texto clasificado" : "textos clasificados"}: menos de ${MINIMO}, no se informa`
+      : conContenido.length < MINIMO
+        ? `Solo ${conContenido.length} ${conContenido.length === 1 ? "texto clasificado" : "textos clasificados"} con contenido: menos de ${MINIMO}, no se informa`
         : conteoTemas
             .map(
               (x) => `${x.t.nombre} (${x.c} ${x.c === 1 ? "texto" : "textos"})`,
             )
             .join(" · "),
-    "A19–A20, E13–E14, F20–F21",
+    "A19–A20, E13–E14, F20–F21 · textos con contenido (sin T99)",
   ]);
 
   // ---------- Insumos ----------
@@ -639,8 +675,24 @@ export async function armarInforme(opciones: {
     .filter((t) => t.estado === "revisado" && t.cita)
     .map((t) => ({
       texto: t.texto,
-      origen: `${t.pregunta} · ${NOMBRE[t.estamento]}`,
+      origen: `${t.pregunta} · ${NOMBRE[t.estamento]} · ${[
+        t.tema1,
+        t.tema2,
+        t.tema3,
+      ]
+        .filter((x): x is string => !!x)
+        .map((x) =>
+          x === "T98" && t.temaNuevo
+            ? `T98 ${t.temaNuevo}`
+            : `${x} ${temas.find((y) => y.codigo === x)?.nombre ?? ""}`,
+        )
+        .join(" · ")}`,
     }));
+  const totalEstamentos = {
+    A: urna.A.length,
+    E: urna.E.length,
+    F: urna.F.length,
+  };
 
   // Síntesis neutral: lo que comparten los estamentos y donde más difieren.
   const sin = sintesis(urna);
@@ -950,16 +1002,10 @@ export async function armarInforme(opciones: {
           texto:
             "Textos revisados (sin nombres de personas) y clasificados por la comisión. Los marcados «no publicar» no aparecen.",
         },
-        temasPorEstamento("La escuela en el 2030: temas", textos, temas, [
-          "A19",
-          "E13",
-          "F20",
-        ]),
-        temasPorEstamento("Cambios propuestos: temas", textos, temas, [
-          "A20",
-          "E14",
-          "F21",
-        ]),
+        ...GRUPOS_ABIERTAS.flatMap((g) =>
+          temasPorEstamento(g, textos, temas, totalEstamentos),
+        ),
+        ...bloqueOtra(textos, temas),
         citas.length
           ? { tipo: "citas", titulo: "Citas destacadas", citas }
           : { tipo: "nota", texto: "Aún no hay citas destacadas." },
