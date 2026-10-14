@@ -318,8 +318,22 @@ export default async function ManualComision() {
           </li>
           <li>
             <strong>Página pública</strong> (<code>/resultados</code>): versión
-            resumida para la comunidad. La publica la administración desde
-            Informe cuando la comisión lo acuerde.
+            resumida para la comunidad, con las citas y los temas nuevos. La
+            publica la administración desde Informe cuando la comisión lo
+            acuerde.
+          </li>
+          <li>
+            <strong>
+              Antes de descargar el PDF oficial y antes de publicar:
+            </strong>{" "}
+            revisar las <strong>citas destacadas</strong> y las{" "}
+            <strong>etiquetas de temas nuevos (T98)</strong> en Resultados →
+            Abiertas. Una cita o etiqueta que señale a una persona o a un grupo
+            reconocible («cuestionamiento a docentes», un episodio que se
+            reconoce) se corrige en la clasificación: se quita la marca de cita
+            o se clasifica el texto en un tema de la lista, y se vuelve a cargar
+            el archivo. La plataforma no filtra estos textos: los escribe y los
+            marca la comisión.
           </li>
         </ul>
       </Seccion>
