@@ -80,6 +80,7 @@ class Lienzo {
     const permitidos = new Set(font.getCharacterSet());
     return [
       ...s
+        .replace(/\s*[\r\n\t]+\s*/g, " ")
         .replace(/[≥]/g, ">=")
         .replace(/[→]/g, "->")
         .replace(/[✓]/g, "v")
@@ -184,14 +185,18 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
       break;
     case "cifras": {
       const w = (UTIL - 16) / 3;
-      L.espacio(58);
+      const detalles = b.items.map((it) =>
+        it.detalle ? L.lineas(it.detalle, f.normal, 7.5, w - 16) : [],
+      );
+      const extra = Math.max(0, ...detalles.map((d) => d.length - 1)) * 9;
+      L.espacio(58 + extra);
       b.items.forEach((it, i) => {
         const x = M + i * (w + 8);
         L.page.drawRectangle({
           x,
-          y: L.y - 52,
+          y: L.y - 52 - extra,
           width: w,
-          height: 52,
+          height: 52 + extra,
           borderColor: C.filete,
           borderWidth: 0.8,
         });
@@ -217,16 +222,17 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
           font: f.negrita,
           color: C.tinta,
         });
-        if (it.detalle)
-          L.page.drawText(L.limpio(it.detalle, f.normal), {
+        detalles[i].forEach((l, j) =>
+          L.page.drawText(l, {
             x: x + 8,
-            y: L.y - 47,
+            y: L.y - 47 - j * 9,
             size: 7.5,
             font: f.normal,
             color: C.grafito,
-          });
+          }),
+        );
       });
-      L.y -= 60;
+      L.y -= 60 + extra;
       break;
     }
     case "barras": {
@@ -289,8 +295,9 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
       const colE = (UTIL - colTexto - colDif) / b.estamentos.length;
       // Misma escala en toda la columna: se reserva el espacio de la cifra y el lugar.
       const anchoBarra = colE - 52;
+      const altoCab = b.sinPreferencia.length ? 30 : 22;
       const cabecera = () => {
-        L.espacio(22);
+        L.espacio(altoCab);
         L.page.drawText(L.limpio(b.encabezado.toUpperCase(), f.negrita), {
           x: M,
           y: L.y - 9,
@@ -316,7 +323,7 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
           });
           const nE = b.n[e] ?? 0;
           L.page.drawText(
-            `n = ${nE}${nE > 0 && nE < 30 ? " (pocos casos)" : ""}${b.sinPreferencia.includes(e) ? " · sin preferencia clara" : ""}`,
+            `n = ${nE}${nE > 0 && nE < 30 ? " (pocos casos)" : ""}`,
             {
               x: x + 9,
               y: L.y - 18,
@@ -325,6 +332,14 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
               color: nE < 30 ? C.lacre : C.gris,
             },
           );
+          if (b.sinPreferencia.includes(e))
+            L.page.drawText("sin preferencia clara", {
+              x: x + 9,
+              y: L.y - 26,
+              size: 7,
+              font: f.normal,
+              color: C.gris,
+            });
         });
         if (conDif) {
           const t = "DIFERENCIA";
@@ -336,7 +351,7 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
             color: C.grafito,
           });
         }
-        L.y -= 22;
+        L.y -= altoCab;
       };
       cabecera();
       L.alCortar = cabecera;
@@ -402,7 +417,7 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
           }
         });
         if (conDif && fila.dif != null) {
-          const t = `${fila.dif >= 30 ? "> " : ""}${Math.round(fila.dif)} ${Math.round(fila.dif) === 1 ? "pt" : "pts"}${fila.difFragil ? " (!)" : ""}`;
+          const t = `${Math.round(fila.dif)} ${Math.round(fila.dif) === 1 ? "pt" : "pts"}${fila.difFragil ? " (!)" : ""}`;
           const fuente = fila.dif >= 30 ? f.negrita : f.normal;
           L.page.drawText(t, {
             x: M + UTIL - fuente.widthOfTextAtSize(t, 8.5),
@@ -433,7 +448,7 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
         );
       }
       L.texto(
-        `Barras de 0 a 100%. 1° 2° 3°: las más elegidas por cada estamento; «=1°»: empate técnico (una persona o menos).${conDif ? " Diferencia: puntos entre el estamento más alto y el más bajo; en rojo desde 30; (!) frágil: una persona distinta la bajaría de 30." : ""}`,
+        `Barras de 0 a 100%. 1° 2° 3°: las más elegidas por cada estamento; «=1°»: empate técnico (una persona o menos).${conDif ? " Diferencia: puntos entre el estamento más alto y el más bajo; en negrita roja desde 30; (!) frágil: una persona distinta la bajaría de 30." : ""}`,
         { size: 8, color: C.gris },
       );
       origen(b.origen);
@@ -475,13 +490,37 @@ function dibujarBloque(L: Lienzo, b: Bloque) {
       );
       const resto = UTIL - anchoNum.reduce((s, x) => s + x, 0);
       const totalLargo = largo.reduce((s, x) => s + x, 0) || 1;
+      const sizeTabla = k > 5 ? 8 : 8.5;
+      // Mínimo de una columna de texto: su palabra más larga, para que no se corte («Funcionario / s»).
+      const minimo = b.columnas.map((c, i) =>
+        b.numericas?.includes(i)
+          ? anchoNum[i]
+          : Math.max(
+              40,
+              ...b.filas.flatMap((r) =>
+                L.limpio(r[i] ?? "", f.normal)
+                  .split(/\s+/)
+                  .map((p) => f.normal.widthOfTextAtSize(p, sizeTabla) + 12),
+              ),
+            ),
+      );
       const anchos = b.columnas.map((_, i) =>
         b.numericas?.includes(i)
           ? anchoNum[i]
-          : Math.max(40, (largo[i] / totalLargo) * resto),
+          : Math.max(minimo[i], (largo[i] / totalLargo) * resto),
       );
-      const escala = UTIL / anchos.reduce((s, x) => s + x, 0);
-      for (let i = 0; i < k; i++) anchos[i] *= escala;
+      const total = anchos.reduce((s, x) => s + x, 0);
+      if (total <= UTIL) {
+        for (let i = 0; i < k; i++) anchos[i] *= UTIL / total;
+      } else {
+        // Sobra ancho: se quita solo de lo que cada columna tiene por sobre su mínimo.
+        const holgura = anchos.map((a, i) => a - minimo[i]);
+        const totalHolgura = holgura.reduce((s, x) => s + x, 0);
+        const quitar = Math.min(1, (total - UTIL) / (totalHolgura || 1));
+        for (let i = 0; i < k; i++) anchos[i] -= holgura[i] * quitar;
+        const nuevo = anchos.reduce((s, x) => s + x, 0);
+        if (nuevo > UTIL) for (let i = 0; i < k; i++) anchos[i] *= UTIL / nuevo;
+      }
       const xs = anchos.map(
         (_, i) => M + anchos.slice(0, i).reduce((s, x) => s + x, 0),
       );

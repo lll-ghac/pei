@@ -5,7 +5,6 @@ import { listarTemas, listarTextos, type Texto } from "./abiertas";
 import { NIVELES } from "./cursos-iniciales";
 import {
   GRUPOS_ABIERTAS,
-  PREGUNTAS_ABIERTAS,
   grupoDe,
   temasDeGrupo,
   temasDeOtra,
@@ -530,22 +529,6 @@ export async function armarInforme(opciones: {
       .map((f) => `${f.opcion.texto} (${fmtPct(prom(f))})`);
   };
   const clasificados = textos.filter((t) => t.estado === "revisado" && t.tema1);
-  const conContenido = clasificados.filter(
-    (t) =>
-      PREGUNTAS_ABIERTAS.includes(t.pregunta) &&
-      ![t.tema1, t.tema2, t.tema3].includes("T99"),
-  );
-  const conteoTemas = temas
-    .filter((t) => !["T98", "T99"].includes(t.codigo))
-    .map((t) => ({
-      t,
-      c: conContenido.filter((x) =>
-        [x.tema1, x.tema2, x.tema3].includes(t.codigo),
-      ).length,
-    }))
-    .filter((x) => x.c > 0)
-    .sort((a, b) => b.c - a.c)
-    .slice(0, 3);
   const lineas: string[][] = [];
   const pushLinea = (que: string, v: string[] | null, fuente: string) =>
     lineas.push([
@@ -578,19 +561,28 @@ export async function armarInforme(opciones: {
     top3(comparable("Perfil de egreso")),
     "A16, E11, F17 · promedio de estamentos",
   );
-  lineas.push([
-    "Temas más mencionados en las abiertas",
-    clasificados.length === 0
-      ? "Aún no hay clasificación cargada (Panel → Abiertas)"
-      : conContenido.length < MINIMO
-        ? `Solo ${conContenido.length} ${conContenido.length === 1 ? "texto clasificado" : "textos clasificados"} con contenido: menos de ${MINIMO}, no se informa`
-        : conteoTemas
-            .map(
-              (x) => `${x.t.nombre} (${x.c} ${x.c === 1 ? "texto" : "textos"})`,
-            )
-            .join(" · "),
-    "A19–A20, E13–E14, F20–F21 · textos con contenido (sin T99)",
-  ]);
+  for (const g of GRUPOS_ABIERTAS) {
+    const r = temasDeGrupo(textos, temas, g.preguntas, MINIMO);
+    const prom = (f: (typeof r.filas)[number]) =>
+      r.estamentos.reduce((s, e) => s + (f.pct[e] ?? 0), 0) /
+      r.estamentos.length;
+    lineas.push([
+      `Temas más mencionados: ${g.titulo.toLowerCase()}`,
+      clasificados.length === 0
+        ? "Aún no hay clasificación cargada (Panel → Abiertas)"
+        : !r.estamentos.length
+          ? `Ningún estamento llega a ${MINIMO} personas con textos clasificados`
+          : [...r.filas]
+              .sort((x, y) => prom(y) - prom(x))
+              .slice(0, 3)
+              .map(
+                (f) =>
+                  `${f.texto.replace(/^T\d+ · /, "")} (${fmtPct(prom(f))})`,
+              )
+              .join(" · "),
+      `${g.preguntas.join(", ")} · promedio de estamentos${r.estamentos.length && r.estamentos.length < 3 ? ` (${r.estamentos.join(", ")})` : ""} · % de quienes escribieron algo con contenido`,
+    ]);
+  }
 
   // ---------- Insumos ----------
   const noSe: string[][] = [];
