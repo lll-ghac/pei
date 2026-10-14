@@ -597,6 +597,12 @@ export default async function Resultados(
                               : `${x} ${nombreTema.get(x) ?? ""}`,
                           )
                           .join(" · ")}
+                        {!c.citaPublica && (
+                          <strong className="text-lacre">
+                            {" "}
+                            · solo comisión
+                          </strong>
+                        )}
                       </p>
                     </li>
                   ))}

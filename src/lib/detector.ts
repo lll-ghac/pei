@@ -253,6 +253,12 @@ function reCargo(cargo: string): RegExp {
   return new RegExp(String.raw`(?<!\p{L})${patron}(?!\p{L})`, "giu");
 }
 
+/**
+ * Marcas fuertes: todas menos «mayúscula a mitad de oración». Se usan para volver a revisar los textos
+ * ya revisados (aviso antes de descargar): la mayúscula marca muchos textos aceptados a conciencia.
+ */
+export const esFuerte = (m: Marca) => m.motivo !== "mayúscula";
+
 /** ¿La palabra en `indice` inicia una oración, una línea o un elemento de lista? */
 function inicioDeOracion(texto: string, indice: number): boolean {
   const antes = texto.slice(0, indice);

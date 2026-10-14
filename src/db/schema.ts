@@ -67,7 +67,9 @@ export const credenciales = pgTable("credenciales", {
 
 /** Urna: una fila por encuesta enviada. Sin fecha, sin hora, sin credencial. */
 export const respuestas = pgTable("respuestas", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   estamento: text("estamento").notNull(),
   cursoCodigo: text("curso_codigo"), // vacío en funcionarios
   prueba: boolean("prueba").notNull(),
@@ -121,7 +123,9 @@ export const observaciones = pgTable("observaciones", {
  * para que el archivo no se pueda cruzar con la planilla de respuestas.
  */
 export const textos = pgTable("textos", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   respuestaId: uuid("respuesta_id")
     .notNull()
     .references(() => respuestas.id, { onDelete: "cascade" }),
@@ -135,6 +139,8 @@ export const textos = pgTable("textos", {
   tema3: text("tema_3"),
   temaNuevo: text("tema_nuevo"),
   cita: boolean("cita").notNull().default(false),
+  /** false = cita solo para la comisión: no sale en la página pública. */
+  citaPublica: boolean("cita_publica").notNull().default(true),
 });
 
 /** Temas para clasificar los textos (lista inicial aprobada T01–T18, T98, T99; ampliable). */

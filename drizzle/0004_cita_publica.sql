@@ -1,0 +1,1 @@
+ALTER TABLE "textos" ADD COLUMN "cita_publica" boolean DEFAULT true NOT NULL;

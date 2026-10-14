@@ -318,9 +318,9 @@ export default async function ManualComision() {
           </li>
           <li>
             <strong>Página pública</strong> (<code>/resultados</code>): versión
-            resumida para la comunidad, con las citas y los temas nuevos. La
-            publica la administración desde Informe cuando la comisión lo
-            acuerde.
+            resumida para la comunidad, con las citas públicas y los temas
+            nuevos. La publica la administración desde Informe cuando la
+            comisión lo acuerde.
           </li>
           <li>
             <strong>
@@ -328,12 +328,15 @@ export default async function ManualComision() {
             </strong>{" "}
             revisar las <strong>citas destacadas</strong> y las{" "}
             <strong>etiquetas de temas nuevos (T98)</strong> en Resultados →
-            Abiertas. Una cita o etiqueta que señale a una persona o a un grupo
-            reconocible («cuestionamiento a docentes», un episodio que se
-            reconoce) se corrige en la clasificación: se quita la marca de cita
-            o se clasifica el texto en un tema de la lista, y se vuelve a cargar
-            el archivo. La plataforma no filtra estos textos: los escribe y los
-            marca la comisión.
+            Abiertas. La clasificación refleja lo que dicen los textos (las
+            críticas o elogios al personal van en T19 o T20). Lo que no debe
+            llegar a la comunidad se controla al publicar: una cita que solo
+            debe ver la comisión se marca <code>comisión</code> en vez de{" "}
+            <code>sí</code> en <code>cita_destacada</code> (sigue en Resultados
+            y en el PDF, no en la página pública), y una etiqueta T98 que señale
+            a personas se reescribe en términos neutros. Si el panel avisa que
+            hay textos revisados con posibles identificaciones, revíselos en
+            Abiertas → Revisados antes de descargar.
           </li>
         </ul>
       </Seccion>

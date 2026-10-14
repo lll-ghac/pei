@@ -7,6 +7,7 @@ import { armarInforme } from "@/lib/informe";
 import { fechaCierre } from "@/lib/resultados";
 import { cambiarPublicacion } from "../../acciones";
 import { AvisoEnsayo, Ayuda } from "../../Ayuda";
+import { AvisoIdentificaciones } from "../../AvisoIdentificaciones";
 
 export const metadata = { title: "Informe final · Encuesta PEI 2027" };
 
@@ -81,6 +82,7 @@ export default async function Informe() {
         className="bg-papel border border-filete p-5 space-y-3"
         aria-label="Descargar y publicar"
       >
+        <AvisoIdentificaciones prueba={prueba} />
         {faltan > 0 ? (
           <p className="text-[16px]">
             El PDF se habilita cuando no quedan textos por revisar en{" "}

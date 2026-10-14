@@ -3,6 +3,7 @@ import { ENCUESTAS, preguntasDe, type Estamento } from "@/lib/encuestas";
 import {
   CARGOS_INICIALES,
   ROLES,
+  esFuerte,
   leerCargos,
   leerPersonal,
   listarTemas,
@@ -23,6 +24,7 @@ import {
   guardarTema,
 } from "../../acciones";
 import { AvisoEnsayo, Ayuda } from "../../Ayuda";
+import { AvisoIdentificaciones } from "../../AvisoIdentificaciones";
 import { NOMBRE } from "../resultados/Graficos";
 import { EditorTexto } from "./EditorTexto";
 import { Importar } from "./Importar";
@@ -237,7 +239,14 @@ export default async function Abiertas(props: PageProps<"/gestion/abiertas">) {
   const pendientes = conMarcas.filter((x) => x.t.estado === "pendiente");
   const marcados = pendientes.filter((x) => x.marcas.length > 0);
   const sinMarcas = pendientes.filter((x) => x.marcas.length === 0);
-  const revisados = conMarcas.filter((x) => x.t.estado === "revisado");
+  // Revisados: primero los que todavía tienen marcas fuertes (posibles identificaciones).
+  const revisados = conMarcas
+    .filter((x) => x.t.estado === "revisado")
+    .map((x) => ({ ...x, fuertes: x.marcas.filter(esFuerte) }))
+    .sort(
+      (a, b) => Number(b.fuertes.length > 0) - Number(a.fuertes.length > 0),
+    );
+  const conIdentificacion = revisados.filter((x) => x.fuertes.length).length;
   const noPublicar = conMarcas.filter((x) => x.t.estado === "no_publicar");
   const clasificados = textos.filter((t) => t.tema1).length;
   const nombreTema = Object.fromEntries(temas.map((t) => [t.codigo, t.nombre]));
@@ -280,6 +289,8 @@ export default async function Abiertas(props: PageProps<"/gestion/abiertas">) {
       )}
 
       <Guia paso={paso} abierta={clasificados === 0} />
+
+      <AvisoIdentificaciones prueba={prueba} cantidad={conIdentificacion} />
 
       <div className="flex items-start gap-3 max-w-[85ch]">
         <p className="text-[16px] text-grafito">
@@ -401,7 +412,9 @@ export default async function Abiertas(props: PageProps<"/gestion/abiertas">) {
             </li>
             <li>
               <strong>Revisados:</strong> listos para descargar. Toque
-              «Corregir» para cambiar uno.
+              «Corregir» para cambiar uno. Arriba, con borde rojo, los que
+              todavía tienen una posible identificación (nombre, cargo con su
+              asignatura o curso, cargo único): revíselos antes de descargar.
             </li>
             <li>
               <strong>No publicar:</strong> quedan fuera de todo. Con «Corregir»
@@ -479,15 +492,25 @@ export default async function Abiertas(props: PageProps<"/gestion/abiertas">) {
           {(vista === "revisados" ? revisados : noPublicar).length === 0 && (
             <li className="text-grafito">No hay textos en este grupo.</li>
           )}
-          {(vista === "revisados" ? revisados : noPublicar).map(({ t }) => (
+          {(vista === "revisados"
+            ? revisados
+            : noPublicar.map((x) => ({ ...x, fuertes: [] as Marca[] }))
+          ).map(({ t, fuertes }) => (
             <li
               key={t.id}
-              className="bg-papel border border-filete p-4 space-y-2"
+              className={`bg-papel border p-4 space-y-2 ${fuertes.length ? "border-lacre border-l-4" : "border-filete"}`}
             >
               <Cabeza t={t} etq={etq} />
+              {fuertes.length > 0 && (
+                <Motivos texto={t.texto} marcas={fuertes} />
+              )}
               <details>
                 <summary className="cursor-pointer text-[17px] leading-relaxed list-none">
-                  {t.texto}{" "}
+                  {fuertes.length ? (
+                    <Resaltado texto={t.texto} marcas={fuertes} />
+                  ) : (
+                    t.texto
+                  )}{" "}
                   <span className="text-[14px] text-timbre underline ml-1">
                     Corregir
                   </span>
@@ -538,7 +561,9 @@ export default async function Abiertas(props: PageProps<"/gestion/abiertas">) {
                 usa T98
               </li>
               <li>
-                <code>cita_destacada</code>: «sí» o «no»
+                <code>cita_destacada</code>: «sí» (cita pública), «comisión»
+                (solo para la comisión: sale en Resultados y en el PDF, no en la
+                página pública) o «no»
               </li>
             </ul>
             <p>
@@ -591,8 +616,8 @@ export default async function Abiertas(props: PageProps<"/gestion/abiertas">) {
             Columnas: <code>id_respuesta</code>, <code>tema_1</code>,{" "}
             <code>tema_2</code>, <code>tema_3</code>,{" "}
             <code>tema_nuevo_texto</code> (etiqueta breve cuando se usa T98) y{" "}
-            <code>cita_destacada</code> (sí/no). Se aceptan solo temas activos.
-            Cada carga reemplaza la anterior.{" "}
+            <code>cita_destacada</code> (sí, comisión o no). Se aceptan solo
+            temas activos. Cada carga reemplaza la anterior.{" "}
             {clasificados > 0 && (
               <strong className="text-tinta">
                 Hoy hay {clasificados} textos clasificados.

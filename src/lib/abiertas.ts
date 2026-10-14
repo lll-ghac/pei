@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { CARGOS_INICIALES, marcarNombres } from "./detector";
+import { CARGOS_INICIALES, esFuerte, marcarNombres } from "./detector";
 import type { Estamento } from "./encuestas";
 
 /** Lista inicial aprobada de temas (Diccionario de datos). */
@@ -142,6 +142,8 @@ export type Texto = {
   tema3: string | null;
   temaNuevo: string | null;
   cita: boolean;
+  /** false = cita solo para la comisión. */
+  citaPublica: boolean;
 };
 
 export async function listarTextos(prueba: boolean): Promise<Texto[]> {
@@ -157,6 +159,7 @@ export async function listarTextos(prueba: boolean): Promise<Texto[]> {
       tema3: schema.textos.tema3,
       temaNuevo: schema.textos.temaNuevo,
       cita: schema.textos.cita,
+      citaPublica: schema.textos.citaPublica,
     })
     .from(schema.textos)
     .innerJoin(
@@ -182,10 +185,29 @@ export async function listarTextos(prueba: boolean): Promise<Texto[]> {
 export {
   CARGOS_INICIALES,
   ROLES,
+  esFuerte,
   marcarNombres,
   type Marca,
   type TipoMarca,
 } from "./detector";
+
+/**
+ * Textos ya revisados que todavía tienen marcas fuertes del detector (posibles identificaciones).
+ * Una vez revisado, un texto no vuelve a pasar por la revisión: este aviso es la red de seguridad
+ * antes de descargar archivos o el PDF oficial.
+ */
+export async function revisadosConIdentificacion(prueba: boolean) {
+  const [textos, personal, cargos] = await Promise.all([
+    listarTextos(prueba),
+    leerPersonal(),
+    leerCargos(),
+  ]);
+  return textos.filter(
+    (t) =>
+      t.estado === "revisado" &&
+      marcarNombres(t.texto, personal, cargos).some(esFuerte),
+  ).length;
+}
 
 /** Cargos únicos para marcar como posible identificación (editables por la administración). */
 export async function leerCargos(): Promise<string[]> {
@@ -343,15 +365,23 @@ export type FilaClasificada = {
   temas: string[];
   temaNuevo: string | null;
   cita: boolean;
+  citaPublica: boolean;
 };
 export type Revision = {
   filas: FilaClasificada[];
   errores: string[];
   porTema: Record<string, number>;
   sinClasificar: number;
+  citas: { publicas: number; comision: number };
 };
 
 const SI = new Set(["si", "sí", "s", "1", "x", "true", "verdadero"]);
+/** Cita solo para la comisión: sale en Resultados y en el PDF, no en la página pública. */
+const COMISION = new Set([
+  "comision",
+  "solo comision",
+  "solo para la comision",
+]);
 const NORMAL = (s: string) =>
   s.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
@@ -368,6 +398,7 @@ export async function revisarClasificacion(
       errores: ["El archivo no tiene filas de datos."],
       porTema: {},
       sinClasificar: 0,
+      citas: { publicas: 0, comision: 0 },
     };
   const cab = filas[0].map(NORMAL);
   const col = (nombre: string) => cab.indexOf(nombre);
@@ -383,6 +414,7 @@ export async function revisarClasificacion(
       ],
       porTema: {},
       sinClasificar: 0,
+      citas: { publicas: 0, comision: 0 },
     };
   }
   const textos = (await listarTextos(prueba)).filter(
@@ -422,13 +454,16 @@ export async function revisarClasificacion(
       return void errores.push(
         `Línea ${linea}: usa T98 (tema nuevo) sin etiqueta en tema_nuevo_texto.`,
       );
-    const cita = iCita >= 0 ? SI.has(NORMAL(f[iCita] ?? "")) : false;
+    const valorCita = iCita >= 0 ? NORMAL(f[iCita] ?? "") : "";
+    const cita = SI.has(valorCita) || COMISION.has(valorCita);
+    const citaPublica = !COMISION.has(valorCita);
     for (const t of temas) porTema[t] = (porTema[t] ?? 0) + 1;
     salida.push({
       id,
       temas,
       temaNuevo: temas.includes("T98") ? temaNuevo : null,
       cita,
+      citaPublica,
     });
   });
   return {
@@ -436,6 +471,10 @@ export async function revisarClasificacion(
     errores,
     porTema,
     sinClasificar: textos.length - salida.filter((x) => x.temas.length).length,
+    citas: {
+      publicas: salida.filter((x) => x.cita && x.citaPublica).length,
+      comision: salida.filter((x) => x.cita && !x.citaPublica).length,
+    },
   };
 }
 
@@ -446,7 +485,7 @@ export async function aplicarClasificacion(
 ) {
   await db.transaction(async (tx) => {
     await tx.execute(sql`
-      update textos set tema_1 = null, tema_2 = null, tema_3 = null, tema_nuevo = null, cita = false
+      update textos set tema_1 = null, tema_2 = null, tema_3 = null, tema_nuevo = null, cita = false, cita_publica = true
       where respuesta_id in (select id from respuestas where prueba = ${prueba})`);
     for (const f of filas) {
       await tx
@@ -457,6 +496,7 @@ export async function aplicarClasificacion(
           tema3: f.temas[2] ?? null,
           temaNuevo: f.temaNuevo,
           cita: f.cita,
+          citaPublica: f.citaPublica,
         })
         .where(eq(schema.textos.id, f.id));
     }

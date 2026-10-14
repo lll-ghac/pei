@@ -361,7 +361,7 @@ export async function armarSabana(version: Version, valores: Valores) {
       tema(t.tema2),
       tema(t.tema3),
       t.temaNuevo,
-      t.tema1 ? (t.cita ? "sí" : "no") : null,
+      t.tema1 ? (t.cita ? (t.citaPublica ? "sí" : "comisión") : "no") : null,
     ]);
   hojas.push({
     nombre: "Abiertas",
@@ -409,7 +409,7 @@ export async function armarSabana(version: Version, valores: Valores) {
     [
       "Abiertas",
       "cita_destacada",
-      "La comisión la marcó como cita destacada",
+      "La comisión la marcó como cita destacada («comisión»: solo para la comisión, no sale en la página pública)",
       "sí / no",
       "",
     ],

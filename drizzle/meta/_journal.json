@@ -29,6 +29,13 @@
       "when": 1791285711266,
       "tag": "0003_abiertas",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791990554467,
+      "tag": "0004_cita_publica",
+      "breakpoints": true
     }
   ]
 }

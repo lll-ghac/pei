@@ -2,7 +2,7 @@
 // Uso:  npx tsx --test pruebas/detector.test.mts
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { marcarNombres } from "../src/lib/detector.ts";
+import { esFuerte, marcarNombres } from "../src/lib/detector.ts";
 
 const PERSONAL = ["Clarett Julia Burgos Salas", "Sara Viviana del Rosario Camacho Cortés", "Isabel Lorena Galleguillos Bravo", "Julio Enrique Cruz Hernández"];
 const marcado = (texto: string, personal: string[] = PERSONAL) =>
@@ -51,4 +51,10 @@ test("un curso solo, sin cargo, no se marca", () => {
 test("cargos únicos como posible identificación", () => {
   assert.deepEqual(marcado("la directora debería escuchar más"), ["directora|identificacion"]);
   assert.deepEqual(marcado("La Jefa de UTP no responde"), ["Jefa de UTP|identificacion"]);
+});
+
+test("marcas fuertes: «la profe de lenguaje» sí, una mayúscula suelta no (aviso de textos ya revisados)", () => {
+  const fuertes = (t: string) => marcarNombres(t, []).filter(esFuerte).map((m) => t.slice(m.inicio, m.fin));
+  assert.deepEqual(fuertes("Sacar a la profe de lenguaje (ya saben a cual)"), ["profe de lenguaje"]);
+  assert.deepEqual(fuertes("Me gusta la escuela y Valentina es simpática"), []);
 });

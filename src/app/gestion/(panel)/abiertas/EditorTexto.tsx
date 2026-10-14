@@ -18,13 +18,35 @@ export function EditorTexto({
 }) {
   const [valor, setValor] = useState(texto);
   const [confirmando, setConfirmando] = useState(false);
+  const [aviso, setAviso] = useState("");
   const area = useRef<HTMLTextAreaElement>(null);
   const cambio = valor.trim() !== texto.trim();
 
+  /**
+   * Reemplaza por el rol lo seleccionado dentro del cuadro. Si se seleccionó en el texto de arriba
+   * (el que muestra las marcas), se busca ese fragmento en el cuadro. Sin selección no se inserta nada:
+   * antes el rol caía al comienzo del texto y el nombre quedaba intacto.
+   */
   function insertar(rol: string) {
     const el = area.current;
     if (!el) return;
-    const { selectionStart: a, selectionEnd: b } = el;
+    let a = el.selectionStart;
+    let b = el.selectionEnd;
+    if (a === b) {
+      const afuera = (window.getSelection()?.toString() ?? "").trim();
+      const i = afuera ? valor.indexOf(afuera) : -1;
+      if (i < 0) {
+        setAviso(
+          afuera
+            ? "No se encontró ese fragmento en el cuadro. Selecciónelo dentro del cuadro y vuelva a tocar el rol."
+            : "Primero seleccione, dentro del cuadro, el nombre o el dato que quiere reemplazar.",
+        );
+        return;
+      }
+      a = i;
+      b = i + afuera.length;
+    }
+    setAviso("");
     const nuevo = valor.slice(0, a) + rol + valor.slice(b);
     setValor(nuevo);
     requestAnimationFrame(() => {
@@ -56,6 +78,10 @@ export function EditorTexto({
           role="group"
           aria-label="Confirmar el texto final"
         >
+          <p className="rotulo text-[14px] text-grafito">Antes</p>
+          <p className="text-[16px] leading-relaxed whitespace-pre-wrap text-grafito">
+            {texto}
+          </p>
           <p className="rotulo text-[14px] text-grafito">
             Así quedará guardado (el original no se conserva)
           </p>
@@ -93,6 +119,11 @@ export function EditorTexto({
             aria-label="Texto revisado"
             className="campo text-[17px] leading-relaxed"
           />
+          {aviso && (
+            <p role="alert" className="text-[15px] text-lacre font-bold">
+              {aviso}
+            </p>
+          )}
           <div
             className="flex flex-wrap gap-1.5"
             aria-label="Reemplazar la selección por un rol"
@@ -104,6 +135,8 @@ export function EditorTexto({
               <button
                 key={r}
                 type="button"
+                // Sin esto, tocar el botón borra la selección hecha fuera del cuadro.
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => insertar(r)}
                 className="rounded-[2px] border border-grafito px-2 py-1 text-[14px] hover:bg-fondo"
               >

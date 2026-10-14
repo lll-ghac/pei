@@ -59,6 +59,10 @@ export function Importar({ temas }: { temas: Record<string, string> }) {
                 {aviso.resumen.sinClasificar} textos revisados quedarían sin
                 tema.
               </p>
+              <p>
+                Citas destacadas: {aviso.resumen.citas.publicas} públicas ·{" "}
+                {aviso.resumen.citas.comision} solo para la comisión.
+              </p>
               <ul className="columns-1 sm:columns-2 text-[15px]">
                 {aviso.resumen.porTema.map(([t, n]) => (
                   <li key={t}>

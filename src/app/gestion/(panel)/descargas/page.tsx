@@ -5,6 +5,7 @@ import { pendientes, sincronizarTextos } from "@/lib/abiertas";
 import { leerEstado } from "@/lib/estado";
 import { exigirGestor } from "@/lib/gestion";
 import { AvisoEnsayo, Ayuda } from "../../Ayuda";
+import { AvisoIdentificaciones } from "../../AvisoIdentificaciones";
 import { Verificar } from "./Verificar";
 
 export const metadata = { title: "Descargas · Encuesta PEI 2027" };
@@ -95,6 +96,7 @@ export default async function Descargas() {
         )}
       </div>
       {prueba && !estado.cerrada && <AvisoEnsayo />}
+      {habilitada && <AvisoIdentificaciones prueba={prueba} />}
 
       <section
         className="bg-papel border border-filete p-5 space-y-4"

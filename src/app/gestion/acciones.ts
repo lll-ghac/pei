@@ -518,6 +518,7 @@ export type AvisoImportacion = Aviso & {
     filas: number;
     sinClasificar: number;
     porTema: [string, number][];
+    citas: { publicas: number; comision: number };
   };
   contenido?: string;
 };
@@ -550,6 +551,7 @@ export async function importarClasificacion(
     filas: r.filas.length,
     sinClasificar: r.sinClasificar,
     porTema: Object.entries(r.porTema).sort((a, b) => b[1] - a[1]),
+    citas: r.citas,
   };
   if (form.get("confirmar") !== "si") {
     return {
@@ -562,7 +564,7 @@ export async function importarClasificacion(
   await registrar(
     g.usuario,
     "Clasificación de abiertas cargada",
-    `${r.filas.length} textos; reemplaza la carga anterior`,
+    `${r.filas.length} textos; citas: ${r.citas.publicas} públicas, ${r.citas.comision} solo comisión; reemplaza la carga anterior`,
   );
   revalidatePath("/gestion", "layout");
   return { ok: `Clasificación cargada: ${r.filas.length} textos.` };
@@ -594,14 +596,12 @@ export async function guardarTema(form: FormData) {
     const nums = usados.map((x) => Number(x.c.slice(1))).filter((x) => x < 98);
     const nuevo = `T${String(Math.max(18, ...nums) + 1).padStart(2, "0")}`;
     if (Number(nuevo.slice(1)) >= 98) return;
-    await db
-      .insert(schema.temas)
-      .values({
-        codigo: nuevo,
-        nombre,
-        descripcion,
-        orden: Math.max(...usados.map((x) => x.o)) + 1,
-      });
+    await db.insert(schema.temas).values({
+      codigo: nuevo,
+      nombre,
+      descripcion,
+      orden: Math.max(...usados.map((x) => x.o)) + 1,
+    });
     await registrar(g.usuario, "Tema agregado", `${nuevo}: ${nombre}`);
   }
   revalidatePath("/gestion/abiertas");

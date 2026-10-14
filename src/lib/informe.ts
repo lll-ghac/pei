@@ -678,7 +678,12 @@ export async function armarInforme(opciones: {
   }
 
   const citas = textos
-    .filter((t) => t.estado === "revisado" && t.cita)
+    .filter(
+      (t) =>
+        t.estado === "revisado" &&
+        t.cita &&
+        (!opciones.publico || t.citaPublica),
+    )
     .map((t) => ({
       texto: t.texto,
       origen: `${t.pregunta} · ${NOMBRE[t.estamento]} · ${[
@@ -692,7 +697,7 @@ export async function armarInforme(opciones: {
             ? `T98 ${t.temaNuevo}`
             : `${x} ${temas.find((y) => y.codigo === x)?.nombre ?? ""}`,
         )
-        .join(" · ")}`,
+        .join(" · ")}${t.citaPublica ? "" : " · solo comisión"}`,
       grupo: grupoDe(t.pregunta),
     }));
   const bloqueCitas = (grupo: string, titulo: string): Bloque[] => {
