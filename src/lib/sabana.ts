@@ -5,6 +5,7 @@ import ExcelJS from "exceljs";
 import { strToU8, zipSync } from "fflate";
 import { db, schema } from "@/db";
 import { aCsv, listarTemas, listarTextos } from "./abiertas";
+import { detalleSinUsuarios, rolDeActor } from "./bitacora-terceros";
 import { NIVELES } from "./cursos-iniciales";
 import {
   ENCUESTAS,
@@ -178,6 +179,14 @@ export async function armarSabana(version: Version, valores: Valores) {
         .where(eq(schema.credenciales.prueba, prueba)),
       db.select().from(schema.bitacora).orderBy(asc(schema.bitacora.id)),
     ]);
+  // Para terceros, la bitácora va con roles en vez de nombres de usuario.
+  const rolDe = new Map(
+    (
+      await db
+        .select({ usuario: schema.gestores.usuario, rol: schema.gestores.rol })
+        .from(schema.gestores)
+    ).map((x) => [x.usuario, x.rol]),
+  );
   const curso = new Map(cursos.map((c) => [c.codigo, c]));
   const textoDe = new Map(textos.map((t) => [`${t.id}`, t]));
   // Estado de revisión de cada texto de «Otra», por respuesta y pregunta.
@@ -495,12 +504,16 @@ export async function armarSabana(version: Version, valores: Valores) {
     nombre: "Bitácora",
     columnas: ["fecha", "quién", "acción", "detalle"],
     anchos: [18, 16, 36, 90],
-    filas: bitacora.map((b) => [
-      fechaHora.format(b.fecha),
-      b.actor,
-      b.accion,
-      b.detalle,
-    ]),
+    filas: bitacora.map((b) =>
+      version === "terceros"
+        ? [
+            fechaHora.format(b.fecha),
+            rolDeActor(b.actor, rolDe),
+            b.accion,
+            detalleSinUsuarios(b.accion, b.detalle, rolDe),
+          ]
+        : [fechaHora.format(b.fecha), b.actor, b.accion, b.detalle],
+    ),
   });
   conteo.Bitácora = bitacora.length;
 
@@ -560,6 +573,9 @@ export async function armarSabana(version: Version, valores: Valores) {
           ],
           [
             "La gestión de funcionarios (F7 y F8) está en la hoja Funcionarios_gestion, sin identificador y en otro orden, cruzada solo con Docente/Asistente (F1). Si un grupo tiene menos de 5, F1 queda vacío.",
+          ],
+          [
+            "La hoja Bitácora indica el rol de quien hizo cada acción (Administración, Comisión, Sistema), no su nombre de usuario.",
           ],
         ]
       : []),
